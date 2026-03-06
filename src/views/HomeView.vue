@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 
 // 基金估值数据（仅查询，无持仓）
 const funds = ref([
@@ -41,6 +41,7 @@ const lastUpdated = ref('14:32:15')
 const refreshProgress = ref(0)
 const REFRESH_INTERVAL = 30000 // 30秒
 let progressInterval: ReturnType<typeof setInterval> | null = null
+const isRefreshing = ref(false)
 
 // 启动自动刷新进度条
 function startProgress() {
@@ -57,6 +58,7 @@ function startProgress() {
 
 // 执行刷新
 function doRefresh() {
+  isRefreshing.value = true
   // 模拟刷新数据
   funds.value.forEach(fund => {
     const change = (Math.random() - 0.5) * 0.5
@@ -65,6 +67,9 @@ function doRefresh() {
   })
   lastUpdated.value = new Date().toLocaleTimeString('zh-CN')
   startProgress() // 重新开始进度条
+  window.setTimeout(() => {
+    isRefreshing.value = false
+  }, 500)
 }
 
 // 手动点击刷新
@@ -72,8 +77,14 @@ function manualRefresh() {
   doRefresh()
 }
 
-// 启动自动刷新
-startProgress()
+onMounted(() => {
+  startProgress()
+})
+
+onUnmounted(() => {
+  if (progressInterval) clearInterval(progressInterval)
+  progressInterval = null
+})
 </script>
 
 <template>
@@ -85,20 +96,37 @@ startProgress()
           FundLite
         </h1>
         <!-- 刷新按钮 -->
-        <button @click="manualRefresh" class="relative w-8 h-8 flex items-center justify-center rounded-lg bg-white">
-          <!-- 底部边框(浅灰色) -->
-          <div class="absolute inset-0 rounded-lg border"></div>
-          <!-- 进度边框(浅蓝色) - 使用 clip-path 实现左边进度效果 -->
-          <div class="absolute inset-0 rounded-lg border-2 border-blue-400 transition-all duration-100" :style="{
-            clipPath: `inset(0 ${100 - refreshProgress}% 0 0)`
-          }"></div>
-          <!-- 刷新图标 -->
-          <svg class="w-4 h-4 text-blue-600 relative z-10" :class="{ 'animate-spin': refreshProgress >= 100 }"
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <button
+          type="button"
+          class="refresh-btn"
+          aria-label="刷新"
+          :style="{ '--progress': refreshProgress }"
+          @click="manualRefresh"
+        >
+          <svg class="refresh-btn__progress" viewBox="0 0 32 32" aria-hidden="true">
+            <path
+              class="refresh-btn__track"
+              d="M16 0.5H21.5A10 10 0 0 1 31.5 10.5V21.5A10 10 0 0 1 21.5 31.5H10.5A10 10 0 0 1 0.5 21.5V10.5A10 10 0 0 1 10.5 0.5H16Z"
+              pathLength="100"
+            />
+            <path
+              class="refresh-btn__bar"
+              d="M16 0.5H21.5A10 10 0 0 1 31.5 10.5V21.5A10 10 0 0 1 21.5 31.5H10.5A10 10 0 0 1 0.5 21.5V10.5A10 10 0 0 1 10.5 0.5H16Z"
+              pathLength="100"
+              :style="{ strokeDasharray: `${refreshProgress} 100` }"
+            />
+          </svg>
+          <svg
+            class="refresh-btn__icon"
+            :class="{ 'refresh-btn__icon--spin': isRefreshing }"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-
         </button>
       </div>
     </header>
@@ -153,3 +181,76 @@ startProgress()
     </main>
   </div>
 </template>
+
+<style scoped>
+.refresh-btn {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #fff;
+  border: 0;
+  color: #2563eb; /* blue-600 */
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.refresh-btn:hover {
+  background: #f9fafb; /* gray-50 */
+}
+
+.refresh-btn:active {
+  background: #f3f4f6; /* gray-100 */
+}
+
+.refresh-btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.refresh-btn__icon {
+  width: 16px;
+  height: 16px;
+}
+
+.refresh-btn__progress {
+  position: absolute;
+  inset: 0;
+  width: 32px;
+  height: 32px;
+  pointer-events: none;
+}
+
+.refresh-btn__track,
+.refresh-btn__bar {
+  fill: none;
+  stroke-width: 1;
+}
+
+.refresh-btn__track {
+  stroke: rgba(229, 231, 235, 0.95); /* gray-200 */
+}
+
+.refresh-btn:hover .refresh-btn__track {
+  stroke: rgba(209, 213, 219, 0.95); /* gray-300 */
+}
+
+.refresh-btn__bar {
+  stroke: #60a5fa; /* blue-400 */
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.refresh-btn__icon--spin {
+  animation: refresh-spin 700ms linear infinite;
+}
+
+@keyframes refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>
