@@ -29,7 +29,7 @@ const funds = ref([
   },
   {
     code: '002190',
-    name: '农银新能源主题',
+    name: '农银新能源主题农银新能源主题',
     estimate: 3.2456,
     growth: 3.91,
   },
@@ -77,6 +77,14 @@ function manualRefresh() {
   doRefresh()
 }
 
+function splitFundName(name: string, maxCharsPerLine = 10) {
+  const lines: string[] = []
+  for (let index = 0; index < name.length; index += maxCharsPerLine) {
+    lines.push(name.slice(index, index + maxCharsPerLine))
+  }
+  return lines
+}
+
 onMounted(() => {
   startProgress()
 })
@@ -96,34 +104,18 @@ onUnmounted(() => {
           FundLite
         </h1>
         <!-- 刷新按钮 -->
-        <button
-          type="button"
-          class="refresh-btn"
-          aria-label="刷新"
-          :style="{ '--progress': refreshProgress }"
-          @click="manualRefresh"
-        >
+        <button type="button" class="refresh-btn" aria-label="刷新" :style="{ '--progress': refreshProgress }"
+          @click="manualRefresh">
           <svg class="refresh-btn__progress" viewBox="0 0 32 32" aria-hidden="true">
-            <path
-              class="refresh-btn__track"
+            <path class="refresh-btn__track"
               d="M16 0.5H21.5A10 10 0 0 1 31.5 10.5V21.5A10 10 0 0 1 21.5 31.5H10.5A10 10 0 0 1 0.5 21.5V10.5A10 10 0 0 1 10.5 0.5H16Z"
-              pathLength="100"
-            />
-            <path
-              class="refresh-btn__bar"
+              pathLength="100" />
+            <path class="refresh-btn__bar"
               d="M16 0.5H21.5A10 10 0 0 1 31.5 10.5V21.5A10 10 0 0 1 21.5 31.5H10.5A10 10 0 0 1 0.5 21.5V10.5A10 10 0 0 1 10.5 0.5H16Z"
-              pathLength="100"
-              :style="{ strokeDasharray: `${refreshProgress} 100` }"
-            />
+              pathLength="100" :style="{ strokeDasharray: `${refreshProgress} 100` }" />
           </svg>
-          <svg
-            class="refresh-btn__icon"
-            :class="{ 'refresh-btn__icon--spin': isRefreshing }"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
+          <svg class="refresh-btn__icon" :class="{ 'refresh-btn__icon--spin': isRefreshing }" fill="none"
+            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
@@ -139,26 +131,38 @@ onUnmounted(() => {
       </div>
 
       <!-- 基金列表 -->
-      <div class="space-y-3">
-        <div v-for="fund in funds" :key="fund.code"
-          class="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-          <div class="flex-between items-center">
-            <!-- 左侧：基金信息 -->
-            <div class="flex-1 min-w-0 mr-3">
-              <h3 class="text-base font-semibold text-gray-900 truncate">
-                {{ fund.name }}
-              </h3>
-              <div class="text-xs text-gray-400 mt-0.5">
-                {{ fund.code }} · {{ fund.estimate.toFixed(4) }}
+      <div v-if="funds.length > 0" class="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div class="fund-table__scroller">
+          <div class="fund-table__row fund-table__header">
+            <div class="fund-table__cell fund-table__cell--sticky">
+              基金名称
+            </div>
+            <div class="fund-table__cell fund-table__cell--num">
+              涨跌
+            </div>
+            <div class="fund-table__cell fund-table__cell--num">
+              估值
+            </div>
+          </div>
+
+          <div v-for="fund in funds" :key="fund.code" class="fund-table__row fund-table__body-row">
+            <div class="fund-table__cell fund-table__cell--sticky">
+              <div class="fund-table__name">
+                <span v-for="(line, idx) in splitFundName(fund.name)" :key="`${fund.code}-${idx}`" class="block">
+                  {{ line }}
+                </span>
+              </div>
+              <div class="fund-table__sub tabular-nums">
+                {{ fund.code }}
               </div>
             </div>
-
-            <!-- 右侧：涨跌幅 -->
-            <div :class="[
-              'text-base font-bold tabular-nums',
-              fund.growth >= 0 ? 'text-red-500' : 'text-green-500'
-            ]">
-              {{ fund.growth >= 0 ? '+' : '' }}{{ fund.growth.toFixed(2) }}%
+            <div class="fund-table__cell fund-table__cell--num tabular-nums">
+              <span :class="[fund.growth >= 0 ? 'text-red-600' : 'text-green-600']">
+                {{ fund.growth >= 0 ? '+' : '' }}{{ fund.growth.toFixed(2) }}%
+              </span>
+            </div>
+            <div class="fund-table__cell fund-table__cell--num tabular-nums">
+              {{ fund.estimate.toFixed(4) }}
             </div>
           </div>
         </div>
@@ -193,18 +197,21 @@ onUnmounted(() => {
   border-radius: 10px;
   background: #fff;
   border: 0;
-  color: #2563eb; /* blue-600 */
+  color: #2563eb;
+  /* blue-600 */
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
   -webkit-tap-highlight-color: transparent;
 }
 
 .refresh-btn:hover {
-  background: #f9fafb; /* gray-50 */
+  background: #f9fafb;
+  /* gray-50 */
 }
 
 .refresh-btn:active {
-  background: #f3f4f6; /* gray-100 */
+  background: #f3f4f6;
+  /* gray-100 */
 }
 
 .refresh-btn:focus-visible {
@@ -231,15 +238,18 @@ onUnmounted(() => {
 }
 
 .refresh-btn__track {
-  stroke: rgba(229, 231, 235, 0.95); /* gray-200 */
+  stroke: rgba(229, 231, 235, 0.95);
+  /* gray-200 */
 }
 
 .refresh-btn:hover .refresh-btn__track {
-  stroke: rgba(209, 213, 219, 0.95); /* gray-300 */
+  stroke: rgba(209, 213, 219, 0.95);
+  /* gray-300 */
 }
 
 .refresh-btn__bar {
-  stroke: #60a5fa; /* blue-400 */
+  stroke: #60a5fa;
+  /* blue-400 */
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -252,5 +262,86 @@ onUnmounted(() => {
   to {
     transform: rotate(360deg);
   }
+}
+
+.fund-table__scroller {
+  --fund-name-col: clamp(160px, 11.5rem, 220px);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fund-table__row {
+  display: grid;
+  grid-template-columns: var(--fund-name-col) 80px 96px;
+  align-items: center;
+  min-width: calc(var(--fund-name-col) + 80px + 96px);
+}
+
+.fund-table__header {
+  background: rgba(249, 250, 251, 0.6);
+  border-bottom: 1px solid rgba(243, 244, 246, 1);
+  color: rgba(156, 163, 175, 1);
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: 500;
+}
+
+.fund-table__body-row {
+  border-bottom: 1px solid rgba(243, 244, 246, 1);
+  transition: background-color 150ms ease;
+  cursor: pointer;
+}
+
+.fund-table__body-row:last-child {
+  border-bottom: 0;
+}
+
+.fund-table__body-row:hover {
+  background: rgba(249, 250, 251, 0.6);
+}
+
+.fund-table__cell {
+  padding: 12px 16px;
+}
+
+.fund-table__cell--num {
+  text-align: right;
+}
+
+.fund-table__cell--sticky {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #fff;
+}
+
+.fund-table__header .fund-table__cell--sticky {
+  background: rgba(249, 250, 251, 0.6);
+  z-index: 3;
+}
+
+.fund-table__cell--sticky::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 1px;
+  height: 100%;
+  background: rgba(243, 244, 246, 1);
+}
+
+.fund-table__name {
+  color: rgba(17, 24, 39, 1);
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.fund-table__sub {
+  margin-top: 4px;
+  color: rgba(156, 163, 175, 1);
+  font-size: 12px;
+  line-height: 16px;
 }
 </style>
