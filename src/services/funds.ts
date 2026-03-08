@@ -78,8 +78,14 @@ function cleanupCallback(callbackName: string) {
   }
 }
 
-function loadJsonp<T>(url: string, callbackName: string, callbackParam = 'callback', timeout = 8000) {
+function loadJsonp<T>(
+  url: string,
+  callbackName: string,
+  callbackParam = 'callback',
+  timeout = 8000,
+) {
   return new Promise<T>((resolve, reject) => {
+    // 搜索和估值接口都走 script 注入，兼容对 CORS 不友好的接口。
     const timer = window.setTimeout(() => {
       cleanupCallback(callbackName)
       reject(new Error('请求超时'))
@@ -94,7 +100,7 @@ function loadJsonp<T>(url: string, callbackName: string, callbackParam = 'callba
     const target = new URL(url)
     target.searchParams.set(callbackParam, callbackName)
     appendScript(target.toString())
-      .then(script => {
+      .then((script) => {
         window.setTimeout(() => script.remove(), 0)
       })
       .catch((error: unknown) => {
@@ -108,6 +114,7 @@ function loadJsonp<T>(url: string, callbackName: string, callbackParam = 'callba
 let estimateQueue = Promise.resolve()
 
 function queueEstimate<T>(task: () => Promise<T>) {
+  // 估值接口依赖固定全局回调 jsonpgz，因此串行化请求避免互相覆盖。
   const run = estimateQueue.then(task, task)
   estimateQueue = run.then(
     () => undefined,
@@ -133,8 +140,8 @@ export async function searchFunds(keyword: string) {
   )
 
   return (payload.Datas ?? [])
-    .filter(item => item.CATEGORY === 700 && item.CODE)
-    .map<FundSearchResult>(item => ({
+    .filter((item) => item.CATEGORY === 700 && item.CODE)
+    .map<FundSearchResult>((item) => ({
       code: item.CODE,
       name: item.NAME,
       company: item.FundBaseInfo?.JJGS ?? '',
@@ -151,6 +158,7 @@ async function fetchFundEstimateInternal(code: string) {
       reject(new Error('估值请求超时'))
     }, 8000)
 
+    // 东财估值脚本会直接调用全局 jsonpgz(...)。
     window.jsonpgz = (payload: FundEstimateApiResponse) => {
       window.clearTimeout(timer)
       window.jsonpgz = undefined
@@ -166,7 +174,7 @@ async function fetchFundEstimateInternal(code: string) {
     }
 
     appendScript(`${ESTIMATE_ENDPOINT}/${code}.js?rt=${Date.now()}`)
-      .then(script => {
+      .then((script) => {
         window.setTimeout(() => script.remove(), 0)
       })
       .catch((error: unknown) => {
