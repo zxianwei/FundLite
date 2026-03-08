@@ -77,6 +77,31 @@ function manualRefresh() {
   doRefresh()
 }
 
+function addFund() {
+  const code = window.prompt('请输入基金代码')
+  if (!code) return
+
+  const normalizedCode = code.trim()
+  if (!normalizedCode) return
+
+  const exists = funds.value.some(fund => fund.code === normalizedCode)
+  if (exists) {
+    window.alert('该基金已存在')
+    return
+  }
+
+  const name = window.prompt('请输入基金名称')
+  if (!name) return
+
+  funds.value.unshift({
+    code: normalizedCode,
+    name: name.trim() || `基金 ${normalizedCode}`,
+    estimate: Number((Math.random() * 3 + 0.8).toFixed(4)),
+    growth: Number(((Math.random() - 0.5) * 4).toFixed(2)),
+  })
+  lastUpdated.value = new Date().toLocaleTimeString('zh-CN')
+}
+
 function splitFundName(name: string, maxCharsPerLine = 10) {
   const lines: string[] = []
   for (let index = 0; index < name.length; index += maxCharsPerLine) {
@@ -103,23 +128,31 @@ onUnmounted(() => {
         <h1 class="text-xl font-bold text-blue-600">
           FundLite
         </h1>
-        <!-- 刷新按钮 -->
-        <button type="button" class="refresh-btn" aria-label="刷新" :style="{ '--progress': refreshProgress }"
-          @click="manualRefresh">
-          <svg class="refresh-btn__progress" viewBox="0 0 32 32" aria-hidden="true">
-            <path class="refresh-btn__track"
-              d="M16 0.5H21.5A10 10 0 0 1 31.5 10.5V21.5A10 10 0 0 1 21.5 31.5H10.5A10 10 0 0 1 0.5 21.5V10.5A10 10 0 0 1 10.5 0.5H16Z"
-              pathLength="100" />
-            <path class="refresh-btn__bar"
-              d="M16 0.5H21.5A10 10 0 0 1 31.5 10.5V21.5A10 10 0 0 1 21.5 31.5H10.5A10 10 0 0 1 0.5 21.5V10.5A10 10 0 0 1 10.5 0.5H16Z"
-              pathLength="100" :style="{ strokeDasharray: `${refreshProgress} 100` }" />
-          </svg>
-          <svg class="refresh-btn__icon" :class="{ 'refresh-btn__icon--spin': isRefreshing }" fill="none"
-            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round"
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        </button>
+        <div class="header-actions">
+          <!-- 刷新按钮 -->
+          <button type="button" class="refresh-btn" aria-label="刷新" :style="{ '--progress': refreshProgress }"
+            @click="manualRefresh">
+            <svg class="refresh-btn__progress" viewBox="0 0 32 32" aria-hidden="true">
+              <path class="refresh-btn__track"
+                d="M16 0.5H21.5A10 10 0 0 1 31.5 10.5V21.5A10 10 0 0 1 21.5 31.5H10.5A10 10 0 0 1 0.5 21.5V10.5A10 10 0 0 1 10.5 0.5H16Z"
+                pathLength="100" />
+              <path class="refresh-btn__bar"
+                d="M16 0.5H21.5A10 10 0 0 1 31.5 10.5V21.5A10 10 0 0 1 21.5 31.5H10.5A10 10 0 0 1 0.5 21.5V10.5A10 10 0 0 1 10.5 0.5H16Z"
+                pathLength="100" :style="{ strokeDasharray: `${refreshProgress} 100` }" />
+            </svg>
+            <svg class="refresh-btn__icon" :class="{ 'refresh-btn__icon--spin': isRefreshing }" fill="none"
+              viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+
+          <button type="button" class="action-btn" aria-label="添加基金" @click="addFund">
+            <svg class="action-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -128,6 +161,7 @@ onUnmounted(() => {
       <!-- 更新时间 -->
       <div class="flex-between items-center mb-4 px-1">
         <span class="text-xs text-gray-400">更新于 {{ lastUpdated }}</span>
+        <span class="text-xs text-blue-500 font-medium">共 {{ funds.length }} 只基金</span>
       </div>
 
       <!-- 基金列表 -->
@@ -204,6 +238,12 @@ onUnmounted(() => {
   -webkit-tap-highlight-color: transparent;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .refresh-btn:hover {
   background: #f9fafb;
   /* gray-50 */
@@ -216,6 +256,40 @@ onUnmounted(() => {
 
 .refresh-btn:focus-visible {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.action-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid rgba(219, 234, 254, 0.95);
+  color: #2563eb;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.action-btn:hover {
+  background: #f9fafb;
+  border-color: rgba(191, 219, 254, 1);
+}
+
+.action-btn:active {
+  background: #f3f4f6;
+  border-color: rgba(147, 197, 253, 1);
+}
+
+.action-btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.action-btn__icon {
+  width: 16px;
+  height: 16px;
 }
 
 .refresh-btn__icon {
@@ -344,4 +418,5 @@ onUnmounted(() => {
   font-size: 12px;
   line-height: 16px;
 }
+
 </style>
