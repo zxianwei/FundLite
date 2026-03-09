@@ -30,14 +30,12 @@ const searchError = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const pendingDeleteCode = ref('')
 const pendingDeleteName = ref('')
-const swipedFundCode = ref('')
+const pressDeleteCode = ref('')
 
 let progressInterval: number | null = null
 let searchTimer: number | null = null
 let searchToken = 0
-// 记录触摸起点和位移，用于移动端左滑删除。
-let touchStartX = 0
-let touchDeltaX = 0
+let deletePressTimer: number | null = null
 
 const hasFunds = computed(() => funds.value.length > 0)
 
@@ -167,9 +165,6 @@ async function confirmRemoveFund() {
   if (!pendingDeleteCode.value) return
   const code = pendingDeleteCode.value
   funds.value = funds.value.filter((fund) => fund.code !== code)
-  if (swipedFundCode.value === code) {
-    swipedFundCode.value = ''
-  }
   await persistFunds()
   closeDeleteDialog()
 }
@@ -179,26 +174,19 @@ function closeDeleteDialog() {
   pendingDeleteName.value = ''
 }
 
-// 轻量左滑：滑过阈值后露出删除操作，再点按钮进入二次确认。
-function handleTouchStart(event: TouchEvent, code: string) {
-  swipedFundCode.value = swipedFundCode.value === code ? '' : swipedFundCode.value
-  touchStartX = event.touches[0]?.clientX ?? 0
-  touchDeltaX = 0
+function startDeletePress(fund: WatchedFund) {
+  clearDeletePress()
+  pressDeleteCode.value = fund.code
+  deletePressTimer = window.setTimeout(() => {
+    requestRemoveFund(fund)
+    clearDeletePress()
+  }, 520)
 }
 
-function handleTouchMove(event: TouchEvent) {
-  const currentX = event.touches[0]?.clientX ?? touchStartX
-  touchDeltaX = currentX - touchStartX
-}
-
-function handleTouchEnd(code: string) {
-  if (touchDeltaX <= -48) {
-    swipedFundCode.value = code
-  } else if (touchDeltaX >= 24 && swipedFundCode.value === code) {
-    swipedFundCode.value = ''
-  }
-  touchStartX = 0
-  touchDeltaX = 0
+function clearDeletePress() {
+  if (deletePressTimer) window.clearTimeout(deletePressTimer)
+  deletePressTimer = null
+  pressDeleteCode.value = ''
 }
 
 function formatGrowth(value: number | null) {
@@ -263,8 +251,10 @@ onMounted(async () => {
 onUnmounted(() => {
   if (progressInterval) window.clearInterval(progressInterval)
   if (searchTimer) window.clearTimeout(searchTimer)
+  if (deletePressTimer) window.clearTimeout(deletePressTimer)
   progressInterval = null
   searchTimer = null
+  deletePressTimer = null
 })
 </script>
 
@@ -334,7 +324,7 @@ onUnmounted(() => {
         <span class="text-xs text-blue-500 font-medium">共 {{ funds.length }} 只基金</span>
       </div>
 
-      <div v-if="hasFunds" class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div v-if="hasFunds" class="fund-table-shell">
         <div class="fund-table__scroller">
           <div class="fund-table__row fund-table__header">
             <div class="fund-table__cell fund-table__cell--sticky">基金名称</div>
@@ -345,73 +335,55 @@ onUnmounted(() => {
           <div
             v-for="fund in funds"
             :key="fund.code"
-            class="fund-swipe-row"
-            :class="{ 'fund-swipe-row--open': swipedFundCode === fund.code }"
+            class="fund-table__row fund-table__body-row"
           >
-            <button
-              type="button"
-              class="fund-swipe-row__delete"
-              :aria-label="`删除 ${fund.name}`"
-              @click="requestRemoveFund(fund)"
-            >
-              删除
-            </button>
-
             <div
-              class="fund-table__row fund-table__body-row"
-              @touchstart.passive="handleTouchStart($event, fund.code)"
-              @touchmove.passive="handleTouchMove($event)"
-              @touchend="handleTouchEnd(fund.code)"
+              class="fund-table__cell fund-table__cell--sticky"
+              :class="{ 'fund-table__cell--pressing': pressDeleteCode === fund.code }"
+              @touchstart.passive="startDeletePress(fund)"
+              @touchend="clearDeletePress"
+              @touchcancel="clearDeletePress"
+              @touchmove="clearDeletePress"
+              @mousedown="startDeletePress(fund)"
+              @mouseup="clearDeletePress"
+              @mouseleave="clearDeletePress"
             >
-              <div class="fund-table__cell fund-table__cell--sticky">
-                <button
-                  type="button"
-                  class="fund-table__remove"
-                  :aria-label="`删除 ${fund.name}`"
-                  @click.stop="requestRemoveFund(fund)"
-                >
-                  ×
-                </button>
-                <div class="fund-table__name">
-                  <span
-                    v-for="(line, idx) in splitFundName(fund.name)"
-                    :key="`${fund.code}-${idx}`"
-                    class="block"
-                  >
-                    {{ line }}
-                  </span>
-                </div>
-                <div class="fund-table__sub tabular-nums">
-                  {{ fund.code }}
-                </div>
-                <div v-if="fund.error" class="fund-table__error">
-                  {{ fund.error }}
-                </div>
-              </div>
-
-              <div class="fund-table__cell fund-table__cell--num tabular-nums">
+              <div class="fund-table__name">
                 <span
-                  :class="[
-                    fund.growth === null
-                      ? 'text-gray-400'
-                      : fund.growth >= 0
-                        ? 'text-red-600'
-                        : 'text-green-600',
-                  ]"
+                  v-for="(line, idx) in splitFundName(fund.name)"
+                  :key="`${fund.code}-${idx}`"
+                  class="block"
                 >
-                  {{ fund.isLoading ? '更新中' : formatGrowth(fund.growth) }}
+                  {{ line }}
                 </span>
-                <div class="fund-table__meta">
-                  {{ fund.estimateTime ? fund.estimateTime.slice(11, 16) : '--:--' }}
-                </div>
               </div>
+              <div class="fund-table__sub-row">
+                <div class="fund-table__sub tabular-nums">{{ fund.code }}</div>
+              </div>
+              <div v-if="fund.error" class="fund-table__error">
+                {{ fund.error }}
+              </div>
+            </div>
 
-              <div class="fund-table__cell fund-table__cell--num tabular-nums">
+            <div class="fund-table__cell fund-table__cell--num tabular-nums">
+              <span
+                :class="[
+                  'fund-table__value',
+                  fund.growth === null
+                    ? 'text-gray-400'
+                    : fund.growth >= 0
+                      ? 'text-red-600'
+                      : 'text-green-600',
+                ]"
+              >
+                {{ fund.isLoading ? '更新中' : formatGrowth(fund.growth) }}
+              </span>
+            </div>
+
+            <div class="fund-table__cell fund-table__cell--num tabular-nums">
+              <span class="fund-table__value fund-table__value--estimate">
                 {{ fund.isLoading ? '--' : formatEstimate(fund.estimate) }}
-                <div class="fund-table__meta">
-                  净值 {{ fund.nav === null ? '--' : fund.nav.toFixed(4) }}
-                </div>
-              </div>
+              </span>
             </div>
           </div>
         </div>
@@ -636,10 +608,38 @@ onUnmounted(() => {
   }
 }
 
+.fund-table-shell {
+  overflow: hidden;
+  border: 1px solid rgba(219, 234, 254, 0.88);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(248, 251, 255, 0.96) 0%, rgba(255, 255, 255, 1) 22%),
+    #fff;
+  box-shadow:
+    0 10px 30px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
 .fund-table__scroller {
   --fund-name-col: clamp(160px, 11.5rem, 220px);
   overflow-x: auto;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.65), rgba(255, 255, 255, 0.98));
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+
+.fund-table__scroller::-webkit-scrollbar {
+  height: 8px;
+}
+
+.fund-table__scroller::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
+}
+
+.fund-table__scroller::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .fund-table__row {
@@ -650,63 +650,40 @@ onUnmounted(() => {
 }
 
 .fund-table__header {
-  background: rgba(249, 250, 251, 0.6);
-  border-bottom: 1px solid rgba(243, 244, 246, 1);
-  color: rgba(156, 163, 175, 1);
-  font-size: 12px;
-  line-height: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: linear-gradient(180deg, rgba(240, 247, 255, 0.92), rgba(248, 250, 252, 0.96));
+  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+  color: #7b8aa0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
   font-weight: 500;
+  text-transform: uppercase;
 }
 
 .fund-table__body-row {
-  border-bottom: 1px solid rgba(243, 244, 246, 1);
-  transition: background-color 150ms ease;
-}
-
-.fund-swipe-row {
-  position: relative;
-  overflow: hidden;
-  background: #fff;
-}
-
-.fund-swipe-row__delete {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 72px;
-  border: 0;
-  background: #ef4444;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.fund-swipe-row--open .fund-table__body-row {
-  transform: translateX(-72px);
+  border-bottom: 1px solid rgba(241, 245, 249, 0.95);
+  transition:
+    background-color 150ms ease,
+    transform 180ms ease;
 }
 
 .fund-table__body-row:last-child {
   border-bottom: 0;
 }
 
-.fund-table__body-row:hover {
-  background: rgba(249, 250, 251, 0.6);
+.fund-table__body-row:nth-child(2n) {
+  background: rgba(251, 253, 255, 0.72);
 }
 
-.fund-swipe-row .fund-table__body-row {
-  position: relative;
-  background: #fff;
-  transition:
-    transform 180ms ease,
-    background-color 150ms ease;
-  z-index: 1;
+.fund-table__body-row:hover {
+  background: rgba(248, 250, 252, 0.9);
 }
 
 .fund-table__cell {
   position: relative;
-  padding: 12px 16px;
+  padding: 14px 16px;
 }
 
 .fund-table__cell--num {
@@ -717,11 +694,23 @@ onUnmounted(() => {
   position: sticky;
   left: 0;
   z-index: 2;
-  background: #fff;
+  background:
+    linear-gradient(90deg, rgba(247, 250, 255, 1) 0%, rgba(255, 255, 255, 0.98) 82%),
+    #fff;
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.fund-table__cell--pressing {
+  background:
+    linear-gradient(90deg, rgba(254, 242, 242, 0.98) 0%, rgba(255, 255, 255, 0.98) 82%),
+    #fff;
+  box-shadow: inset 0 0 0 1px rgba(252, 165, 165, 0.28);
 }
 
 .fund-table__header .fund-table__cell--sticky {
-  background: rgba(249, 250, 251, 0.6);
+  background: linear-gradient(90deg, rgba(239, 246, 255, 0.96) 0%, rgba(248, 250, 252, 0.98) 88%);
   z-index: 3;
 }
 
@@ -732,61 +721,30 @@ onUnmounted(() => {
   right: 0;
   width: 1px;
   height: 100%;
-  background: rgba(243, 244, 246, 1);
+  background: rgba(226, 232, 240, 0.95);
+  box-shadow: 12px 0 18px rgba(37, 99, 235, 0.04);
 }
 
 .fund-table__name {
-  padding-right: 18px;
-  color: rgba(17, 24, 39, 1);
+  max-width: 11em;
+  color: #172033;
   font-size: 15px;
   line-height: 20px;
-  font-weight: 600;
+  font-weight: 700;
   word-break: break-all;
+  letter-spacing: -0.01em;
 }
 
-.fund-table__remove {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
+.fund-table__sub-row {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(241, 245, 249, 0.9);
-  color: #94a3b8;
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-  opacity: 0;
-  transition:
-    opacity 150ms ease,
-    background-color 150ms ease,
-    color 150ms ease,
-    transform 150ms ease;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.fund-table__body-row:hover .fund-table__remove,
-.fund-table__remove:focus-visible {
-  opacity: 1;
-}
-
-.fund-table__remove:hover {
-  background: rgba(254, 226, 226, 1);
-  color: #dc2626;
-  transform: scale(1.05);
-}
-
-.fund-table__remove:active {
-  background: rgba(254, 202, 202, 1);
-}
-
-.fund-table__sub,
-.fund-table__meta {
-  margin-top: 4px;
-  color: rgba(156, 163, 175, 1);
+.fund-table__sub {
+  margin-top: 5px;
+  color: #8a97ab;
   font-size: 12px;
   line-height: 16px;
 }
@@ -796,6 +754,19 @@ onUnmounted(() => {
   color: #ef4444;
   font-size: 12px;
   line-height: 16px;
+}
+
+.fund-table__value {
+  display: inline-block;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.fund-table__value--estimate {
+  color: #172033;
+  font-size: 17px;
 }
 
 .empty-state {
@@ -1023,6 +994,10 @@ onUnmounted(() => {
     padding: 12px;
   }
 
+  .fund-table-shell {
+    border-radius: 18px;
+  }
+
   .search-panel {
     padding: 16px;
     border-radius: 20px;
@@ -1032,8 +1007,20 @@ onUnmounted(() => {
     align-items: flex-start;
   }
 
-  .fund-table__remove {
-    display: none;
+  .fund-table__cell {
+    padding: 13px 14px;
+  }
+
+  .fund-table__value {
+    font-size: 17px;
+  }
+
+  .fund-table__value--estimate {
+    font-size: 16px;
+  }
+
+  .fund-table__name {
+    max-width: 10.6em;
   }
 }
 </style>
