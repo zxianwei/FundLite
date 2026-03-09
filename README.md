@@ -1,70 +1,21 @@
-# FundLite
+# FundLite 基金小助手
 
-This template should help get you started developing with Vue 3 in Vite.
+随时随地，轻松查看你的基金收益。
 
-## Recommended IDE Setup
+[**>> 点此立刻体验 <<**](https://zxianwei.github.io/FundLite/#/)
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+---
 
-## Recommended Browser Setup
+### 厌倦了在各种应用里切换查找你的基金？
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+FundLite 是一个超级简洁的基金关注列表工具，专为只想安安静静看估值的你而设计。它只有一个核心功能：
 
-## Type Support for `.vue` Imports in TS
+> 把你关心的基金放在一起，让你一眼就能看到最新的估值和涨跌情况。
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+### 如何使用？
 
-## Customize configuration
+1.  **添加你的基金**：点击右上角的 `+` 号，输入基金代码或名称，把它添加到你的列表里。
+2.  **查看实时涨跌**：首页会展示你所有基金的实时估值。列表会自动刷新，让你随时掌握动态。
+3.  **管理你的列表**：想要删除某个基金？在手机上长按，或者在电脑上用鼠标长按，即可轻松移除。
 
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
-npm run dev
-```
-
-### Type-Check, Compile and Minify for Production
-
-```sh
-npm run build
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-npm run lint
-```
-
-## Deploy to GitHub Pages
-
-This project is configured for GitHub Pages deployment.
-
-1. Push the repository to GitHub.
-2. Open the repository settings on GitHub.
-3. Go to `Settings` -> `Pages`.
-4. In `Build and deployment`, choose `Source: GitHub Actions`.
-5. Push to the `main` branch again, or manually run the `Deploy to GitHub Pages` workflow in `Actions`.
-
-After deployment, the site URL is:
-
-```text
-https://zxianwei.github.io/FundLite/
-```
-
-For mobile access:
-
-1. Open the URL above in your phone browser.
-2. If your phone and computer are both online, no local network setup is needed because the site is hosted on GitHub.
-3. If you update the site, push to `main` again and GitHub Pages will redeploy automatically.
+一切就是这么简单。所有数据都保存在你的浏览器里，安全又私密。没有账户，没有广告，打开即用。
