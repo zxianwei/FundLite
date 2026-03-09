@@ -46,3 +46,25 @@ npm run build
 ```sh
 npm run lint
 ```
+
+## Deploy to GitHub Pages
+
+This project is configured for GitHub Pages deployment.
+
+1. Push the repository to GitHub.
+2. Open the repository settings on GitHub.
+3. Go to `Settings` -> `Pages`.
+4. In `Build and deployment`, choose `Source: GitHub Actions`.
+5. Push to the `main` branch again, or manually run the `Deploy to GitHub Pages` workflow in `Actions`.
+
+After deployment, the site URL is:
+
+```text
+https://zxianwei.github.io/FundLite/
+```
+
+For mobile access:
+
+1. Open the URL above in your phone browser.
+2. If your phone and computer are both online, no local network setup is needed because the site is hosted on GitHub.
+3. If you update the site, push to `main` again and GitHub Pages will redeploy automatically.
