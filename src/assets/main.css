@@ -8,6 +8,9 @@ body,
 
 body {
   margin: 0;
+  background:
+    radial-gradient(circle at top, rgba(15, 118, 110, 0.12), transparent 32%),
+    linear-gradient(180deg, #f6f8f3 0%, #f2f6fb 100%);
 }
 
 #app {
