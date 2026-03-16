@@ -13,7 +13,8 @@ export default defineConfig({
   base: process.env.NODE_ENV === 'production' ? `/${repoName}/` : '/',
   plugins: [
     vue(),
-    vueDevTools(),
+    // Vue DevTools 仅在开发环境使用
+    ...(process.env.NODE_ENV !== 'production' ? [vueDevTools()] : []),
     UnoCSS(),
     VitePWA({
       registerType: 'autoUpdate',
