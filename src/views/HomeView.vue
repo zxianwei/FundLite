@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRegisterSW } from 'virtual:pwa-register/vue'
 
 import { fetchFundEstimate, searchFunds, type FundSearchResult } from '../services/funds'
 import { loadWatchlist, saveWatchlist } from '../services/watchlistStore'
@@ -14,6 +15,14 @@ interface WatchedFund {
   estimateTime: string
   isLoading: boolean
   error: string
+}
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>
+  userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed'
+    platform: string
+  }>
 }
 
 const REFRESH_INTERVAL = 30000
@@ -31,6 +40,15 @@ const searchInputRef = ref<HTMLInputElement | null>(null)
 const pendingDeleteCode = ref('')
 const pendingDeleteName = ref('')
 const pressDeleteCode = ref('')
+const deferredInstallPrompt = ref<BeforeInstallPromptEvent | null>(null)
+const installDismissed = ref(false)
+const iosInstallHintDismissed = ref(false)
+const isStandalone = ref(false)
+const isInstallFlowRunning = ref(false)
+const isOnline = ref(typeof navigator === 'undefined' ? true : navigator.onLine)
+
+const isIos = /iphone|ipad|ipod/i.test(typeof navigator === 'undefined' ? '' : navigator.userAgent)
+const { needRefresh, offlineReady, updateServiceWorker } = useRegisterSW()
 
 let progressInterval: number | null = null
 let searchTimer: number | null = null
@@ -38,6 +56,16 @@ let searchToken = 0
 let deletePressTimer: number | null = null
 
 const hasFunds = computed(() => funds.value.length > 0)
+const canInstallApp = computed(() => !!deferredInstallPrompt.value)
+const showInstallBanner = computed(
+  () => canInstallApp.value && !isStandalone.value && !installDismissed.value,
+)
+const showIosInstallHint = computed(
+  () => isIos && !isStandalone.value && !canInstallApp.value && !iosInstallHintDismissed.value,
+)
+const showUpdateBanner = computed(() => needRefresh.value)
+const showOfflineReadyBanner = computed(() => offlineReady.value)
+const showOfflineBanner = computed(() => !isOnline.value)
 
 function createWatchedFund(input: Pick<WatchedFund, 'code' | 'name'>): WatchedFund {
   return {
@@ -207,6 +235,62 @@ function splitFundName(name: string, maxCharsPerLine = 10) {
   return lines
 }
 
+function syncStandaloneMode() {
+  const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean }
+  isStandalone.value =
+    window.matchMedia('(display-mode: standalone)').matches || navigatorWithStandalone.standalone === true
+}
+
+function handleBeforeInstallPrompt(event: Event) {
+  event.preventDefault()
+  deferredInstallPrompt.value = event as BeforeInstallPromptEvent
+  installDismissed.value = false
+}
+
+function handleAppInstalled() {
+  deferredInstallPrompt.value = null
+  isStandalone.value = true
+}
+
+function handleOnline() {
+  isOnline.value = true
+}
+
+function handleOffline() {
+  isOnline.value = false
+}
+
+async function promptInstall() {
+  if (!deferredInstallPrompt.value || isInstallFlowRunning.value) return
+
+  isInstallFlowRunning.value = true
+  await deferredInstallPrompt.value.prompt()
+  const choice = await deferredInstallPrompt.value.userChoice
+  deferredInstallPrompt.value = null
+  installDismissed.value = choice.outcome !== 'accepted'
+  isInstallFlowRunning.value = false
+}
+
+function dismissInstallBanner() {
+  installDismissed.value = true
+}
+
+function dismissIosInstallHint() {
+  iosInstallHintDismissed.value = true
+}
+
+function dismissOfflineReadyBanner() {
+  offlineReady.value = false
+}
+
+function dismissUpdateBanner() {
+  needRefresh.value = false
+}
+
+async function applyPwaUpdate() {
+  await updateServiceWorker(true)
+}
+
 watch(searchQuery, (value) => {
   searchError.value = ''
   if (searchTimer) window.clearTimeout(searchTimer)
@@ -242,6 +326,12 @@ watch(searchQuery, (value) => {
 })
 
 onMounted(async () => {
+  syncStandaloneMode()
+  window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+  window.addEventListener('appinstalled', handleAppInstalled)
+  window.addEventListener('online', handleOnline)
+  window.addEventListener('offline', handleOffline)
+
   // 首屏先恢复本地自选，再按当前列表刷新实时估值。
   const storedFunds = await loadWatchlist()
   funds.value = storedFunds.map(createWatchedFund)
@@ -252,6 +342,10 @@ onUnmounted(() => {
   if (progressInterval) window.clearInterval(progressInterval)
   if (searchTimer) window.clearTimeout(searchTimer)
   if (deletePressTimer) window.clearTimeout(deletePressTimer)
+  window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+  window.removeEventListener('appinstalled', handleAppInstalled)
+  window.removeEventListener('online', handleOnline)
+  window.removeEventListener('offline', handleOffline)
   progressInterval = null
   searchTimer = null
   deletePressTimer = null
@@ -317,6 +411,85 @@ onUnmounted(() => {
     </header>
 
     <main class="content-wrapper">
+      <div
+        v-if="
+          showInstallBanner ||
+          showIosInstallHint ||
+          showUpdateBanner ||
+          showOfflineReadyBanner ||
+          showOfflineBanner
+        "
+        class="status-stack"
+      >
+        <div v-if="showInstallBanner" class="app-banner">
+          <div>
+            <div class="app-banner__title">安装到桌面</div>
+            <div class="app-banner__text">添加到手机桌面后，打开会更像原生应用。</div>
+          </div>
+          <div class="app-banner__actions">
+            <button type="button" class="banner-btn banner-btn--ghost" @click="dismissInstallBanner">
+              稍后
+            </button>
+            <button
+              type="button"
+              class="banner-btn banner-btn--primary"
+              :disabled="isInstallFlowRunning"
+              @click="promptInstall"
+            >
+              {{ isInstallFlowRunning ? '处理中' : '立即安装' }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="showIosInstallHint" class="app-banner app-banner--soft">
+          <div>
+            <div class="app-banner__title">iPhone 安装方式</div>
+            <div class="app-banner__text">
+              在 Safari 里点“分享”，再选“添加到主屏幕”。
+            </div>
+          </div>
+          <div class="app-banner__actions">
+            <button type="button" class="banner-btn banner-btn--ghost" @click="dismissIosInstallHint">
+              知道了
+            </button>
+          </div>
+        </div>
+
+        <div v-if="showUpdateBanner" class="app-banner app-banner--update">
+          <div>
+            <div class="app-banner__title">发现新版本</div>
+            <div class="app-banner__text">刷新后会切到最新缓存和资源。</div>
+          </div>
+          <div class="app-banner__actions">
+            <button type="button" class="banner-btn banner-btn--ghost" @click="dismissUpdateBanner">
+              忽略
+            </button>
+            <button type="button" class="banner-btn banner-btn--primary" @click="applyPwaUpdate">
+              立即更新
+            </button>
+          </div>
+        </div>
+
+        <div v-if="showOfflineReadyBanner" class="app-banner app-banner--ready">
+          <div>
+            <div class="app-banner__title">已支持离线打开</div>
+            <div class="app-banner__text">基础页面资源已缓存，断网也能打开应用壳。</div>
+          </div>
+          <div class="app-banner__actions">
+            <button type="button" class="banner-btn banner-btn--ghost" @click="dismissOfflineReadyBanner">
+              收起
+            </button>
+          </div>
+        </div>
+
+        <div v-if="showOfflineBanner" class="app-banner app-banner--offline">
+          <div>
+            <div class="app-banner__title">当前处于离线状态</div>
+            <div class="app-banner__text">本地自选仍可查看，联网后再刷新最新估值。</div>
+          </div>
+        </div>
+      </div>
+
       <div class="flex-between items-center mb-4 px-1 gap-4">
         <span class="text-xs text-gray-400">
           {{ lastUpdated ? `更新于 ${lastUpdated}` : '正在连接基金估值接口' }}
@@ -495,6 +668,115 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.status-stack {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.app-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(15, 118, 110, 0.14);
+  background:
+    linear-gradient(135deg, rgba(243, 248, 245, 0.98), rgba(233, 245, 241, 0.98)),
+    #f5f8f2;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.06);
+}
+
+.app-banner--soft {
+  border-color: rgba(217, 119, 6, 0.16);
+  background:
+    linear-gradient(135deg, rgba(255, 250, 237, 0.98), rgba(255, 244, 229, 0.98)),
+    #fff8eb;
+}
+
+.app-banner--update {
+  border-color: rgba(37, 99, 235, 0.14);
+  background:
+    linear-gradient(135deg, rgba(241, 246, 255, 0.98), rgba(232, 241, 255, 0.98)),
+    #f4f7ff;
+}
+
+.app-banner--ready {
+  border-color: rgba(20, 83, 45, 0.14);
+  background:
+    linear-gradient(135deg, rgba(240, 249, 241, 0.98), rgba(229, 245, 232, 0.98)),
+    #f1f8f2;
+}
+
+.app-banner--offline {
+  border-color: rgba(120, 113, 108, 0.14);
+  background:
+    linear-gradient(135deg, rgba(248, 247, 245, 0.98), rgba(242, 240, 236, 0.98)),
+    #f6f3ee;
+}
+
+.app-banner__title {
+  font-size: 14px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.app-banner__text {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(15, 23, 42, 0.7);
+}
+
+.app-banner__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.banner-btn {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 0;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 150ms ease,
+    background-color 150ms ease,
+    opacity 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.banner-btn:hover {
+  transform: translateY(-1px);
+}
+
+.banner-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+  transform: none;
+}
+
+.banner-btn--primary {
+  background: #0f766e;
+  color: #f8fafc;
+}
+
+.banner-btn--primary:hover {
+  background: #0b665f;
+}
+
+.banner-btn--ghost {
+  background: rgba(255, 255, 255, 0.78);
+  color: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
 .header-actions {
   display: flex;
   align-items: center;
@@ -530,11 +812,23 @@ onUnmounted(() => {
 
 .refresh-btn:focus-visible,
 .action-btn:focus-visible,
+.banner-btn:focus-visible,
 .search-panel__close:focus-visible,
 .search-result:focus-visible,
 .search-input:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+@media (max-width: 640px) {
+  .app-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .app-banner__actions {
+    width: 100%;
+  }
 }
 
 .action-btn {
