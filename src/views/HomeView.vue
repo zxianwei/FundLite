@@ -43,6 +43,26 @@ let searchTimer: number | null = null
 let searchToken = 0
 let deletePressTimer: number | null = null
 let importMessageTimer: number | null = null
+let extraRefreshTimer: number | null = null
+
+// 检查当前是否在交易时间内（9:30 - 15:00）
+function isInTradingHours(): boolean {
+  const now = new Date()
+  const hours = now.getHours()
+  const minutes = now.getMinutes()
+  const totalMinutes = hours * 60 + minutes
+
+  // 交易时间：9:30 - 15:00
+  const startMinutes = 9 * 60 + 30
+  const endMinutes = 15 * 60
+
+  return totalMinutes >= startMinutes && totalMinutes < endMinutes
+}
+
+// 检查是否有基金没有获取到涨跌数据
+function hasEmptyGrowth(): boolean {
+  return funds.value.some((fund) => !fund.error && fund.growth === null)
+}
 
 function createWatchedFund(input: Pick<WatchedFund, 'code' | 'name'>): WatchedFund {
   return {
@@ -74,6 +94,13 @@ function setLastUpdated() {
 function startProgress() {
   refreshProgress.value = 0
   if (progressInterval) window.clearInterval(progressInterval)
+
+  // 非交易时间不启动自动刷新
+  if (!isInTradingHours()) {
+    refreshProgress.value = 0
+    return
+  }
+
   progressInterval = window.setInterval(() => {
     refreshProgress.value += 100 / (REFRESH_INTERVAL / 100)
     if (refreshProgress.value >= 100) {
@@ -112,6 +139,15 @@ async function refreshFunds() {
     await refreshFund(fund)
   }
   setLastUpdated()
+
+  // 如果有没有获取到涨跌的数据，3秒后额外刷新一次
+  if (hasEmptyGrowth()) {
+    if (extraRefreshTimer) window.clearTimeout(extraRefreshTimer)
+    extraRefreshTimer = window.setTimeout(() => {
+      void refreshFunds()
+    }, 3000)
+  }
+
   startProgress()
   window.setTimeout(() => {
     isRefreshing.value = false
@@ -346,10 +382,12 @@ onUnmounted(() => {
   if (searchTimer) window.clearTimeout(searchTimer)
   if (deletePressTimer) window.clearTimeout(deletePressTimer)
   if (importMessageTimer) window.clearTimeout(importMessageTimer)
+  if (extraRefreshTimer) window.clearTimeout(extraRefreshTimer)
   progressInterval = null
   searchTimer = null
   deletePressTimer = null
   importMessageTimer = null
+  extraRefreshTimer = null
 })
 </script>
 
