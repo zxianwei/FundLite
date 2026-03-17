@@ -20,6 +20,7 @@
     "vue-router": "^5.0.3"
   },
   "devDependencies": {
+    "@babel/plugin-syntax-jsx": "^7.28.6",
     "@iconify-json/carbon": "^1.2.19",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.11.0",
@@ -38,8 +39,11 @@
     "typescript": "~5.9.3",
     "unocss": "^66.6.4",
     "vite": "^8.0.0",
-    "vite-plugin-vue-devtools": "^8.0.6",
+    "vite-plugin-vue-devtools": "^8.1.0",
     "vue-tsc": "^3.2.5"
+  },
+  "overrides": {
+    "vite": "^8.0.0"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
