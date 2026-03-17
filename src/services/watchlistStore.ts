@@ -95,3 +95,66 @@ export async function saveWatchlist(funds: StoredFund[]) {
     // localStorage fallback has already been written above.
   }
 }
+
+// 导出数据为 JSON 字符串
+export function exportWatchlist(funds: StoredFund[]): string {
+  const data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    funds: funds,
+  }
+  return JSON.stringify(data, null, 2)
+}
+
+// 验证导入的数据格式
+function validateImportedData(data: unknown): StoredFund[] | null {
+  if (!data || typeof data !== 'object') return null
+
+  const obj = data as Record<string, unknown>
+
+  // 支持两种格式：
+  // 1. { version: 1, funds: [...] }
+  // 2. [...] (纯数组格式)
+
+  let funds: unknown[] = []
+
+  if (Array.isArray(obj.funds)) {
+    funds = obj.funds
+  } else if (Array.isArray(obj)) {
+    funds = obj
+  } else {
+    return null
+  }
+
+  const validFunds: StoredFund[] = []
+
+  for (const item of funds) {
+    if (!item || typeof item !== 'object') continue
+
+    const fund = item as Record<string, unknown>
+    const code = typeof fund.code === 'string' ? fund.code.trim() : ''
+    const name = typeof fund.name === 'string' ? fund.name.trim() : ''
+
+    if (code && name) {
+      validFunds.push({ code, name })
+    }
+  }
+
+  return validFunds.length > 0 ? validFunds : null
+}
+
+// 从 JSON 字符串导入数据
+export function importWatchlist(json: string): { success: boolean; funds?: StoredFund[]; error?: string } {
+  try {
+    const parsed = JSON.parse(json)
+    const funds = validateImportedData(parsed)
+
+    if (!funds) {
+      return { success: false, error: '数据格式不正确，未找到有效的基金列表' }
+    }
+
+    return { success: true, funds }
+  } catch {
+    return { success: false, error: 'JSON 解析失败，请检查文件格式' }
+  }
+}
