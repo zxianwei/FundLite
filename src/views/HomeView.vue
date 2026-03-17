@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { fetchFundEstimate, searchFunds, type FundSearchResult } from '../services/funds'
-import { loadWatchlist, saveWatchlist } from '../services/watchlistStore'
+import { loadWatchlist, saveWatchlist, exportWatchlist, importWatchlist, type StoredFund } from '../services/watchlistStore'
 
 interface WatchedFund {
   code: string
@@ -31,6 +31,10 @@ const searchInputRef = ref<HTMLInputElement | null>(null)
 const pendingDeleteCode = ref('')
 const pendingDeleteName = ref('')
 const pressDeleteCode = ref('')
+const isSettingsOpen = ref(false)
+const importFileInputRef = ref<HTMLInputElement | null>(null)
+const importError = ref('')
+const importSuccess = ref('')
 
 const hasFunds = computed(() => funds.value.length > 0)
 
@@ -38,6 +42,7 @@ let progressInterval: number | null = null
 let searchTimer: number | null = null
 let searchToken = 0
 let deletePressTimer: number | null = null
+let importMessageTimer: number | null = null
 
 function createWatchedFund(input: Pick<WatchedFund, 'code' | 'name'>): WatchedFund {
   return {
@@ -174,6 +179,94 @@ function closeDeleteDialog() {
   pendingDeleteName.value = ''
 }
 
+// 设置面板
+function openSettingsModal() {
+  isSettingsOpen.value = true
+  importError.value = ''
+  importSuccess.value = ''
+}
+
+function closeSettingsModal() {
+  isSettingsOpen.value = false
+  importError.value = ''
+  importSuccess.value = ''
+  if (importMessageTimer) {
+    window.clearTimeout(importMessageTimer)
+    importMessageTimer = null
+  }
+}
+
+// 导出数据
+function handleExport() {
+  const payload = funds.value.map((fund) => ({
+    code: fund.code,
+    name: fund.name,
+  }))
+  const json = exportWatchlist(payload)
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `fundlite-backup-${new Date().toISOString().slice(0, 10)}.json`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+// 选择导入文件
+function handleImportClick() {
+  importFileInputRef.value?.click()
+}
+
+// 处理导入文件
+async function handleImportFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+
+  if (!file) return
+
+  importError.value = ''
+  importSuccess.value = ''
+
+  try {
+    const text = await file.text()
+    const result = importWatchlist(text)
+
+    if (!result.success || !result.funds) {
+      importError.value = result.error || '导入失败'
+      return
+    }
+
+    // 合并现有数据，避免重复
+    const existingCodes = new Set(funds.value.map((f) => f.code))
+    const newFunds = result.funds.filter((f: StoredFund) => !existingCodes.has(f.code))
+
+    if (newFunds.length === 0) {
+      importSuccess.value = '导入成功：没有新的基金需要添加'
+    } else {
+      // 添加新基金
+      for (const fund of newFunds) {
+        funds.value.push(createWatchedFund(fund))
+      }
+      await persistFunds()
+      await refreshFunds()
+      importSuccess.value = `成功导入 ${newFunds.length} 只基金`
+    }
+
+    // 3秒后清除成功消息
+    if (importMessageTimer) window.clearTimeout(importMessageTimer)
+    importMessageTimer = window.setTimeout(() => {
+      importSuccess.value = ''
+    }, 3000)
+  } catch {
+    importError.value = '读取文件失败'
+  } finally {
+    // 清空 input 以便可以重复选择同一文件
+    input.value = ''
+  }
+}
+
 function startDeletePress(fund: WatchedFund) {
   clearDeletePress()
   pressDeleteCode.value = fund.code
@@ -252,9 +345,11 @@ onUnmounted(() => {
   if (progressInterval) window.clearInterval(progressInterval)
   if (searchTimer) window.clearTimeout(searchTimer)
   if (deletePressTimer) window.clearTimeout(deletePressTimer)
+  if (importMessageTimer) window.clearTimeout(importMessageTimer)
   progressInterval = null
   searchTimer = null
   deletePressTimer = null
+  importMessageTimer = null
 })
 </script>
 
@@ -310,6 +405,23 @@ onUnmounted(() => {
               stroke-width="2"
             >
               <path stroke-linecap="round" d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+
+          <button type="button" class="action-btn" aria-label="设置" @click="openSettingsModal">
+            <svg
+              class="action-btn__icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </button>
         </div>
@@ -488,6 +600,67 @@ onUnmounted(() => {
           <button type="button" class="dialog-btn dialog-btn--danger" @click="confirmRemoveFund">
             删除
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 设置面板 -->
+    <div v-if="isSettingsOpen" class="search-modal" @click.self="closeSettingsModal">
+      <div class="settings-panel">
+        <div class="search-panel__header">
+          <div>
+            <div class="search-panel__title">数据管理</div>
+            <div class="search-panel__subtitle">导入导出基金数据，方便在不同浏览器间迁移</div>
+          </div>
+
+          <button
+            type="button"
+            class="search-panel__close"
+            aria-label="关闭"
+            @click="closeSettingsModal"
+          >
+            ×
+          </button>
+        </div>
+
+        <div class="settings-content">
+          <div class="settings-section">
+            <h3 class="settings-section__title">导出数据</h3>
+            <p class="settings-section__desc">将当前基金列表导出为 JSON 文件，可用于备份或迁移到其他浏览器</p>
+            <button type="button" class="settings-btn settings-btn--primary" @click="handleExport">
+              <svg class="settings-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              导出基金数据
+            </button>
+          </div>
+
+          <div class="settings-divider"></div>
+
+          <div class="settings-section">
+            <h3 class="settings-section__title">导入数据</h3>
+            <p class="settings-section__desc">从 JSON 文件导入基金列表，会自动合并到现有数据中（跳过重复项）</p>
+            <input
+              ref="importFileInputRef"
+              type="file"
+              accept=".json"
+              class="settings-file-input"
+              @change="handleImportFile"
+            />
+            <button type="button" class="settings-btn settings-btn--secondary" @click="handleImportClick">
+              <svg class="settings-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              选择文件导入
+            </button>
+
+            <div v-if="importError" class="settings-message settings-message--error">
+              {{ importError }}
+            </div>
+            <div v-if="importSuccess" class="settings-message settings-message--success">
+              {{ importSuccess }}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1023,5 +1196,126 @@ onUnmounted(() => {
   .fund-table__name {
     max-width: 10.6em;
   }
+
+  .settings-panel {
+    padding: 16px;
+    border-radius: 20px;
+  }
+}
+
+/* 设置面板样式 */
+.settings-panel {
+  width: min(100%, 480px);
+  max-height: min(80vh, 600px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(239, 246, 255, 0.95) 0%, rgba(255, 255, 255, 0.98) 24%), #fff;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.18);
+}
+
+.settings-content {
+  overflow-y: auto;
+}
+
+.settings-section {
+  padding: 4px 0;
+}
+
+.settings-section__title {
+  color: #111827;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
+
+.settings-section__desc {
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 20px;
+  margin: 0 0 16px 0;
+}
+
+.settings-divider {
+  height: 1px;
+  background: rgba(226, 232, 240, 0.95);
+  margin: 8px 0;
+}
+
+.settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    transform 100ms ease;
+}
+
+.settings-btn__icon {
+  width: 18px;
+  height: 18px;
+}
+
+.settings-btn--primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.settings-btn--primary:hover {
+  background: #1d4ed8;
+}
+
+.settings-btn--primary:active {
+  background: #1e40af;
+  transform: scale(0.98);
+}
+
+.settings-btn--secondary {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid rgba(209, 213, 219, 1);
+}
+
+.settings-btn--secondary:hover {
+  background: #e5e7eb;
+}
+
+.settings-btn--secondary:active {
+  background: #d1d5db;
+  transform: scale(0.98);
+}
+
+.settings-file-input {
+  display: none;
+}
+
+.settings-message {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.settings-message--error {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.settings-message--success {
+  background: #f0fdf4;
+  color: #16a34a;
 }
 </style>
