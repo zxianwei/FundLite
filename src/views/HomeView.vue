@@ -42,9 +42,11 @@ const growthSortOrder = ref<'none' | 'asc' | 'desc'>('none')
 
 // 新功能列表 - 每次更新时修改 version 和列表内容
 // 版本号规则：主版本.功能版本.修复版本（如 1.0.0 → 1.1.0 新增功能 → 1.1.1 修复）
+const currentVersion = '1.0.1'
 const featureList = [
   { title: '涨跌排序', desc: '点击涨跌表头，支持升序/降序/默认三种排序方式切换' },
 ]
+
 
 const hasFunds = computed(() => funds.value.length > 0)
 
@@ -773,7 +775,7 @@ onUnmounted(() => {
 
     <!-- 新功能提示 -->
     <FeatureNotice
-      version="1.0.0"
+      :version="currentVersion"
       title="🎉 新功能上线"
       :features="featureList"
       confirm-text="知道了"
