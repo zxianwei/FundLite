@@ -3,7 +3,10 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { fetchFundEstimate, searchFunds, type FundSearchResult } from '../services/funds'
 import { loadWatchlist, saveWatchlist, exportWatchlist, importWatchlist, type StoredFund } from '../services/watchlistStore'
+import { useTheme } from '../composables/useTheme'
 import FeatureNotice from '../components/FeatureNotice.vue'
+
+const { theme, toggleTheme } = useTheme()
 
 interface WatchedFund {
   code: string
@@ -42,9 +45,9 @@ const growthSortOrder = ref<'none' | 'asc' | 'desc'>('none')
 
 // 新功能列表 - 每次更新时修改 version 和列表内容
 // 版本号规则：主版本.功能版本.修复版本（如 1.0.0 → 1.1.0 新增功能 → 1.1.1 修复）
-const currentVersion = '1.0.1'
+const currentVersion = '1.1.0'
 const featureList = [
-  { title: '涨跌排序', desc: '点击涨跌表头，支持升序/降序/默认三种排序方式切换' },
+  { title: '暗黑模式', desc: '支持亮色/暗黑主题切换，自动适配系统偏好，保护眼睛' },
 ]
 
 
@@ -439,6 +442,21 @@ onUnmounted(() => {
         <div class="header-actions">
           <button
             type="button"
+            class="theme-toggle-btn"
+            aria-label="切换主题"
+            @click="toggleTheme"
+          >
+            <svg v-if="theme === 'dark'" class="theme-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"></circle>
+              <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+            <svg v-else class="theme-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </button>
+
+          <button
+            type="button"
             class="refresh-btn"
             aria-label="刷新"
             :style="{ '--progress': refreshProgress }"
@@ -789,6 +807,39 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.theme-toggle-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid rgba(191, 219, 254, 1);
+  color: #2563eb;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    color 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.theme-toggle-btn:hover {
+  background: #eff6ff;
+  border-color: rgba(147, 197, 253, 1);
+}
+
+.theme-toggle-btn:active {
+  background: #dbeafe;
+}
+
+.theme-toggle__icon {
+  width: 16px;
+  height: 16px;
 }
 
 .refresh-btn {
@@ -1480,5 +1531,338 @@ onUnmounted(() => {
 .settings-message--success {
   background: #f0fdf4;
   color: #16a34a;
+}
+
+/* ==================== 暗黑模式样式 ==================== */
+
+/* 根元素暗黑模式下的基础样式 */
+.dark body {
+  background:
+    radial-gradient(circle at top, rgba(56, 189, 248, 0.08), transparent 32%),
+    linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+}
+
+.dark .min-h-screen.bg-gray-50 {
+  background: transparent;
+}
+
+/* Header 暗黑模式 */
+.dark header.bg-white {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+  border-bottom-color: rgba(51, 65, 85, 0.8);
+}
+
+.dark header .text-blue-600 {
+  color: #60a5fa;
+}
+
+/* 按钮暗黑模式 */
+.dark .theme-toggle-btn,
+.dark .action-btn {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.dark .theme-toggle-btn:hover,
+.dark .action-btn:hover {
+  background: rgba(51, 65, 85, 0.9);
+  border-color: #64748b;
+  color: #e2e8f0;
+}
+
+.dark .refresh-btn {
+  background: rgba(30, 41, 59, 0.8);
+}
+
+.dark .refresh-btn:hover {
+  background: rgba(51, 65, 85, 0.9);
+}
+
+.dark .refresh-btn__track {
+  stroke: rgba(75, 85, 99, 0.6);
+}
+
+.dark .refresh-btn__bar {
+  stroke: #60a5fa;
+}
+
+/* 表格暗黑模式 */
+.dark .fund-table-shell {
+  background:
+    linear-gradient(180deg, rgba(30, 41, 59, 0.96) 0%, rgba(15, 23, 42, 1) 22%),
+    #0f172a;
+  border-color: rgba(51, 65, 85, 0.8);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.dark .fund-table__scroller {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.65), rgba(15, 23, 42, 0.98));
+  scrollbar-color: rgba(75, 85, 99, 0.6) transparent;
+}
+
+.dark .fund-table__scroller::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.6);
+}
+
+.dark .fund-table__header {
+  background: linear-gradient(180deg, rgba(51, 65, 85, 0.92) 0%, rgba(30, 41, 59, 0.96) 100%);
+  border-bottom-color: rgba(71, 85, 105, 0.8);
+  color: #94a3b8;
+}
+
+.dark .fund-table__body-row {
+  border-bottom-color: rgba(51, 65, 85, 0.6);
+}
+
+.dark .fund-table__body-row:nth-child(2n) {
+  background: rgba(30, 41, 59, 0.72);
+}
+
+.dark .fund-table__body-row:hover {
+  background: rgba(51, 65, 85, 0.9);
+}
+
+.dark .fund-table__cell--sticky {
+  background:
+    linear-gradient(90deg, rgba(30, 41, 59, 1) 0%, rgba(15, 23, 42, 0.98) 82%),
+    #0f172a;
+}
+
+.dark .fund-table__cell--sticky::after {
+  background: rgba(51, 65, 85, 0.6);
+  box-shadow: 12px 0 18px rgba(0, 0, 0, 0.15);
+}
+
+.dark .fund-table__header .fund-table__cell--sticky {
+  background: linear-gradient(90deg, rgba(51, 65, 85, 0.96) 0%, rgba(30, 41, 59, 0.98) 88%);
+}
+
+.dark .fund-table__cell--pressing {
+  background:
+    linear-gradient(90deg, rgba(127, 29, 29, 0.4) 0%, rgba(15, 23, 42, 0.98) 82%),
+    #0f172a;
+  box-shadow: inset 0 0 0 1px rgba(252, 165, 165, 0.2);
+}
+
+.dark .fund-table__name {
+  color: #e2e8f0;
+}
+
+.dark .fund-table__sub {
+  color: #64748b;
+}
+
+.dark .fund-table__error {
+  color: #f87171;
+}
+
+.dark .fund-table__value--estimate {
+  color: #e2e8f0;
+}
+
+.dark .fund-table__sort-arrow {
+  color: #475569;
+}
+
+.dark .fund-table__sort-arrow--active {
+  color: #60a5fa;
+}
+
+.dark .fund-table__sort-header:hover .fund-table__sort-arrow {
+  color: #64748b;
+}
+
+.dark .fund-table__cell--sortable:hover {
+  color: #60a5fa;
+}
+
+/* 搜索面板暗黑模式 */
+.dark .search-modal {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.dark .search-panel {
+  background:
+    linear-gradient(180deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.99) 24%), #0f172a;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+}
+
+.dark .search-panel__title {
+  color: #f1f5f9;
+}
+
+.dark .search-panel__subtitle {
+  color: #64748b;
+}
+
+.dark .search-panel__close {
+  background: rgba(51, 65, 85, 0.75);
+  color: #94a3b8;
+}
+
+.dark .search-panel__close:hover {
+  background: rgba(71, 85, 105, 0.9);
+  color: #e2e8f0;
+}
+
+.dark .search-input__icon {
+  color: #64748b;
+}
+
+.dark .search-input {
+  border-color: #475569;
+  background: rgba(15, 23, 42, 0.8);
+  color: #e2e8f0;
+}
+
+.dark .search-input::placeholder {
+  color: #64748b;
+}
+
+.dark .search-input:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+}
+
+.dark .search-status {
+  color: #64748b;
+}
+
+.dark .search-status--error {
+  color: #f87171;
+}
+
+.dark .search-result {
+  border-bottom-color: #334155;
+}
+
+.dark .search-result:hover {
+  background: rgba(51, 65, 85, 0.5);
+}
+
+.dark .search-result__name {
+  color: #f1f5f9;
+}
+
+.dark .search-result__meta {
+  color: #64748b;
+}
+
+.dark .search-result__nav {
+  color: #60a5fa;
+}
+
+.dark .search-result__nav-date {
+  color: #64748b;
+}
+
+/* 设置面板暗黑模式 */
+.dark .settings-panel {
+  background:
+    linear-gradient(180deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.99) 24%), #0f172a;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+}
+
+.dark .settings-section__title {
+  color: #f1f5f9;
+}
+
+.dark .settings-section__desc {
+  color: #64748b;
+}
+
+.dark .settings-divider {
+  background: #334155;
+}
+
+.dark .settings-btn--primary {
+  background: #2563eb;
+}
+
+.dark .settings-btn--primary:hover {
+  background: #1d4ed8;
+}
+
+.dark .settings-btn--secondary {
+  background: #334155;
+  color: #e2e8f0;
+  border-color: #475569;
+}
+
+.dark .settings-btn--secondary:hover {
+  background: #475569;
+}
+
+.dark .settings-message--error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+}
+
+.dark .settings-message--success {
+  background: rgba(34, 197, 94, 0.1);
+  color: #4ade80;
+}
+
+/* 删除对话框暗黑模式 */
+.dark .dialog-backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.dark .dialog-card {
+  background: #1e293b;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+}
+
+.dark .dialog-card__title {
+  color: #f1f5f9;
+}
+
+.dark .dialog-card__text {
+  color: #94a3b8;
+}
+
+.dark .dialog-btn--ghost {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.dark .dialog-btn--ghost:hover {
+  background: #475569;
+}
+
+/* 空状态暗黑模式 */
+.dark .empty-state__hint {
+  color: #64748b;
+}
+
+/* 文字颜色适配 */
+.dark .text-gray-400 {
+  color: #64748b;
+}
+
+.dark .text-blue-500 {
+  color: #60a5fa;
+}
+
+.dark .text-red-600 {
+  color: #f87171;
+}
+
+.dark .text-green-600 {
+  color: #4ade80;
+}
+
+/* 聚焦状态 */
+.dark .refresh-btn:focus-visible,
+.dark .action-btn:focus-visible,
+.dark .theme-toggle-btn:focus-visible,
+.dark .banner-btn:focus-visible,
+.dark .search-panel__close:focus-visible,
+.dark .search-result:focus-visible,
+.dark .search-input:focus-visible {
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
 }
 </style>

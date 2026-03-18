@@ -13,6 +13,13 @@ body {
     linear-gradient(180deg, #f6f8f3 0%, #f2f6fb 100%);
 }
 
+/* 暗黑模式下的 body 背景 */
+.dark body {
+  background:
+    radial-gradient(circle at top, rgba(56, 189, 248, 0.08), transparent 32%),
+    linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+}
+
 #app {
   width: 100%;
 }
