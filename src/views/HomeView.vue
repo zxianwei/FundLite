@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { fetchFundEstimate, searchFunds, type FundSearchResult } from '../services/funds'
 import { loadWatchlist, saveWatchlist, exportWatchlist, importWatchlist, type StoredFund } from '../services/watchlistStore'
+import FeatureNotice from '../components/FeatureNotice.vue'
 
 interface WatchedFund {
   code: string
@@ -35,6 +36,13 @@ const isSettingsOpen = ref(false)
 const importFileInputRef = ref<HTMLInputElement | null>(null)
 const importError = ref('')
 const importSuccess = ref('')
+
+// 新功能列表 - 每次更新时修改这里
+const featureList = [
+  { title: '数据导入导出', desc: '点击右上角设置按钮，可导出基金数据备份，或从其他浏览器导入' },
+  { title: '智能刷新', desc: '交易时间外自动关闭刷新，节省电量' },
+  { title: '自动更新', desc: '新版本发布时自动刷新，无需手动清理缓存' },
+]
 
 const hasFunds = computed(() => funds.value.length > 0)
 
@@ -702,6 +710,14 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+    <!-- 新功能提示 -->
+    <FeatureNotice
+      version="2025-03-18"
+      title="🎉 新功能上线"
+      :features="featureList"
+      confirm-text="知道了"
+      :debug="false"
+    />
   </div>
 </template>
 
@@ -1194,11 +1210,6 @@ onUnmounted(() => {
 .dialog-btn--ghost {
   background: #f3f4f6;
   color: #4b5563;
-}
-
-.dialog-btn--danger {
-  background: #ef4444;
-  color: #fff;
 }
 
 @media (max-width: 640px) {
