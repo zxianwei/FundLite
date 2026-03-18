@@ -40,7 +40,8 @@ const importSuccess = ref('')
 // 排序状态: 'none' | 'asc' | 'desc'
 const growthSortOrder = ref<'none' | 'asc' | 'desc'>('none')
 
-// 新功能列表 - 每次更新时修改这里
+// 新功能列表 - 每次更新时修改 version 和列表内容
+// 版本号规则：主版本.功能版本.修复版本（如 1.0.0 → 1.1.0 新增功能 → 1.1.1 修复）
 const featureList = [
   { title: '涨跌排序', desc: '点击涨跌表头，支持升序/降序/默认三种排序方式切换' },
 ]
@@ -772,7 +773,7 @@ onUnmounted(() => {
 
     <!-- 新功能提示 -->
     <FeatureNotice
-      version="2025-03-18"
+      version="1.0.0"
       title="🎉 新功能上线"
       :features="featureList"
       confirm-text="知道了"
@@ -1072,13 +1073,13 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 0;
-  margin-left: 2px;
-  height: 14px;
+  margin-left: 4px;
+  height: 20px;
 }
 
 .fund-table__sort-arrow {
-  width: 10px;
-  height: 7px;
+  width: 14px;
+  height: 10px;
   color: #d1d5db;
   transition: color 150ms ease;
 }
