@@ -60,16 +60,16 @@ const sortedFunds = computed(() => {
     if (b.growth === null) return -1
     // 升序：从小到大（负数到正数）
     // 降序：从大到小（正数到负数）
-    return growthSortOrder.value === 'asc' ? a.growth - b.growth : b.growth - a.growth
+    return growthSortOrder.value === 'asc' ? b.growth - a.growth : a.growth - b.growth
   })
 })
 
 // 切换排序状态
 function toggleGrowthSort() {
   if (growthSortOrder.value === 'none') {
-    growthSortOrder.value = 'desc' // 第一次点击：降序（高到低）
-  } else if (growthSortOrder.value === 'desc') {
-    growthSortOrder.value = 'asc' // 第二次点击：升序（低到高）
+    growthSortOrder.value = 'asc' // 第一次点击：升序（低到高）
+  } else if (growthSortOrder.value === 'asc') {
+    growthSortOrder.value = 'desc' // 第二次点击：降序（高到低）
   } else {
     growthSortOrder.value = 'none' // 第三次点击：恢复默认
   }
