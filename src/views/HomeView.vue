@@ -42,9 +42,11 @@ const growthSortOrder = ref<'none' | 'asc' | 'desc'>('none')
 
 // 新功能列表 - 每次更新时修改 version 和列表内容
 // 版本号规则：主版本.功能版本.修复版本（如 1.0.0 → 1.1.0 新增功能 → 1.1.1 修复）
+const currentVersion = '1.0.1'
 const featureList = [
   { title: '涨跌排序', desc: '点击涨跌表头，支持升序/降序/默认三种排序方式切换' },
 ]
+
 
 const hasFunds = computed(() => funds.value.length > 0)
 
@@ -60,16 +62,16 @@ const sortedFunds = computed(() => {
     if (b.growth === null) return -1
     // 升序：从小到大（负数到正数）
     // 降序：从大到小（正数到负数）
-    return growthSortOrder.value === 'asc' ? a.growth - b.growth : b.growth - a.growth
+    return growthSortOrder.value === 'asc' ? b.growth - a.growth : a.growth - b.growth
   })
 })
 
 // 切换排序状态
 function toggleGrowthSort() {
   if (growthSortOrder.value === 'none') {
-    growthSortOrder.value = 'desc' // 第一次点击：降序（高到低）
-  } else if (growthSortOrder.value === 'desc') {
-    growthSortOrder.value = 'asc' // 第二次点击：升序（低到高）
+    growthSortOrder.value = 'asc' // 第一次点击：升序（低到高）
+  } else if (growthSortOrder.value === 'asc') {
+    growthSortOrder.value = 'desc' // 第二次点击：降序（高到低）
   } else {
     growthSortOrder.value = 'none' // 第三次点击：恢复默认
   }
@@ -773,7 +775,7 @@ onUnmounted(() => {
 
     <!-- 新功能提示 -->
     <FeatureNotice
-      version="1.0.0"
+      :version="currentVersion"
       title="🎉 新功能上线"
       :features="featureList"
       confirm-text="知道了"
