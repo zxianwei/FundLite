@@ -1073,13 +1073,13 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 0;
-  margin-left: 2px;
-  height: 14px;
+  margin-left: 4px;
+  height: 20px;
 }
 
 .fund-table__sort-arrow {
-  width: 10px;
-  height: 7px;
+  width: 14px;
+  height: 10px;
   color: #d1d5db;
   transition: color 150ms ease;
 }
