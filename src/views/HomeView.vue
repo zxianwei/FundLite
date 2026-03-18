@@ -37,14 +37,42 @@ const importFileInputRef = ref<HTMLInputElement | null>(null)
 const importError = ref('')
 const importSuccess = ref('')
 
+// 排序状态: 'none' | 'asc' | 'desc'
+const growthSortOrder = ref<'none' | 'asc' | 'desc'>('none')
+
 // 新功能列表 - 每次更新时修改这里
 const featureList = [
-  { title: '数据导入导出', desc: '点击右上角设置按钮，可导出基金数据备份，或从其他浏览器导入' },
-  { title: '智能刷新', desc: '交易时间外自动关闭刷新，节省电量' },
-  { title: '自动更新', desc: '新版本发布时自动刷新，无需手动清理缓存' },
+  { title: '涨跌排序', desc: '点击涨跌表头，支持升序/降序/默认三种排序方式切换' },
 ]
 
 const hasFunds = computed(() => funds.value.length > 0)
+
+// 根据排序状态对基金列表进行排序
+const sortedFunds = computed(() => {
+  if (growthSortOrder.value === 'none') {
+    return funds.value
+  }
+  return [...funds.value].sort((a, b) => {
+    // 处理 null 值：null 值排在最后
+    if (a.growth === null && b.growth === null) return 0
+    if (a.growth === null) return 1
+    if (b.growth === null) return -1
+    // 升序：从小到大（负数到正数）
+    // 降序：从大到小（正数到负数）
+    return growthSortOrder.value === 'asc' ? a.growth - b.growth : b.growth - a.growth
+  })
+})
+
+// 切换排序状态
+function toggleGrowthSort() {
+  if (growthSortOrder.value === 'none') {
+    growthSortOrder.value = 'desc' // 第一次点击：降序（高到低）
+  } else if (growthSortOrder.value === 'desc') {
+    growthSortOrder.value = 'asc' // 第二次点击：升序（低到高）
+  } else {
+    growthSortOrder.value = 'none' // 第三次点击：恢复默认
+  }
+}
 
 let progressInterval: number | null = null
 let searchTimer: number | null = null
@@ -486,12 +514,43 @@ onUnmounted(() => {
         <div class="fund-table__scroller">
           <div class="fund-table__row fund-table__header">
             <div class="fund-table__cell fund-table__cell--sticky">基金名称</div>
-            <div class="fund-table__cell fund-table__cell--num">涨跌</div>
+            <div
+              class="fund-table__cell fund-table__cell--num fund-table__cell--sortable"
+              @click="toggleGrowthSort"
+            >
+              <div class="fund-table__sort-header">
+                <span>涨跌</span>
+                <span class="fund-table__sort-icons">
+                  <!-- 上箭头：升序时高亮 -->
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    class="fund-table__sort-arrow"
+                    :class="{ 'fund-table__sort-arrow--active': growthSortOrder === 'asc' }"
+                  >
+                    <path d="M7 14l5-5 5 5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <!-- 下箭头：降序时高亮 -->
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    class="fund-table__sort-arrow"
+                    :class="{ 'fund-table__sort-arrow--active': growthSortOrder === 'desc' }"
+                  >
+                    <path d="M7 10l5 5 5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </div>
+            </div>
             <div class="fund-table__cell fund-table__cell--num">估值</div>
           </div>
 
           <div
-            v-for="fund in funds"
+            v-for="fund in sortedFunds"
             :key="fund.code"
             class="fund-table__row fund-table__body-row"
           >
@@ -710,6 +769,7 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
+
     <!-- 新功能提示 -->
     <FeatureNotice
       version="2025-03-18"
@@ -997,6 +1057,52 @@ onUnmounted(() => {
   font-size: 17px;
 }
 
+.fund-table__sort-header {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.fund-table__sort-icons {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-left: 2px;
+  height: 14px;
+}
+
+.fund-table__sort-arrow {
+  width: 10px;
+  height: 7px;
+  color: #d1d5db;
+  transition: color 150ms ease;
+}
+
+.fund-table__sort-arrow--active {
+  color: #2563eb;
+}
+
+.fund-table__sort-header:hover .fund-table__sort-arrow {
+  color: #9ca3af;
+}
+
+.fund-table__sort-header:hover .fund-table__sort-arrow--active {
+  color: #2563eb;
+}
+
+.fund-table__cell--sortable {
+  cursor: pointer;
+}
+
+.fund-table__cell--sortable:hover {
+  color: #2563eb;
+}
+
 .empty-state {
   text-align: center;
   padding: 5rem 1rem;
@@ -1210,6 +1316,11 @@ onUnmounted(() => {
 .dialog-btn--ghost {
   background: #f3f4f6;
   color: #4b5563;
+}
+
+.dialog-btn--danger {
+  background: #ef4444;
+  color: #fff;
 }
 
 @media (max-width: 640px) {
