@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { fetchFundEstimate, searchFunds, type FundSearchResult } from '../services/funds'
 import { loadWatchlist, saveWatchlist, exportWatchlist, importWatchlist, type StoredFund } from '../services/watchlistStore'
+import FeatureNotice from '../components/FeatureNotice.vue'
 
 interface WatchedFund {
   code: string
@@ -36,8 +37,17 @@ const importFileInputRef = ref<HTMLInputElement | null>(null)
 const importError = ref('')
 const importSuccess = ref('')
 
+<<<<<<< HEAD
 // 排序状态: 'none' | 'asc' | 'desc'
 const growthSortOrder = ref<'none' | 'asc' | 'desc'>('none')
+=======
+// 新功能列表 - 每次更新时修改这里
+const featureList = [
+  { title: '数据导入导出', desc: '点击右上角设置按钮，可导出基金数据备份，或从其他浏览器导入' },
+  { title: '智能刷新', desc: '交易时间外自动关闭刷新，节省电量' },
+  { title: '自动更新', desc: '新版本发布时自动刷新，无需手动清理缓存' },
+]
+>>>>>>> main
 
 const hasFunds = computed(() => funds.value.length > 0)
 
