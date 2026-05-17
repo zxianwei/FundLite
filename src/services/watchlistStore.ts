@@ -57,9 +57,20 @@ export async function loadWatchlist() {
       const transaction = db.transaction(STORE_NAME, 'readonly')
       const request = transaction.objectStore(STORE_NAME).get(WATCHLIST_KEY)
 
-      request.onsuccess = () => {
+      request.onsuccess = async () => {
         const value = request.result
-        if (!Array.isArray(value)) {
+        if (!Array.isArray(value) || value.length === 0) {
+          // IndexedDB 可能被系统清理（如 iOS Safari），此时查 localStorage 捡回数据
+          const fallback = readFromLocalStorage()
+          if (fallback.length > 0) {
+            // 捡回成功，同步写回 IndexedDB 修复存储
+            try {
+              const writeTx = db.transaction(STORE_NAME, 'readwrite')
+              writeTx.objectStore(STORE_NAME).put(fallback, WATCHLIST_KEY)
+            } catch { /* localStorage 兜底仍在，不阻塞返回 */ }
+            resolve(fallback)
+            return
+          }
           resolve([])
           return
         }
