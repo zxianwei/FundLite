@@ -370,14 +370,6 @@ function formatEstimate(value: number | null) {
   return value.toFixed(4)
 }
 
-function splitFundName(name: string, maxCharsPerLine = 10) {
-  const lines: string[] = []
-  for (let index = 0; index < name.length; index += maxCharsPerLine) {
-    lines.push(name.slice(index, index + maxCharsPerLine))
-  }
-  return lines
-}
-
 watch(searchQuery, (value) => {
   searchError.value = ''
   if (searchTimer) window.clearTimeout(searchTimer)
@@ -586,14 +578,8 @@ onUnmounted(() => {
               @mouseup="clearDeletePress"
               @mouseleave="clearDeletePress"
             >
-              <div class="fund-table__name">
-                <span
-                  v-for="(line, idx) in splitFundName(fund.name)"
-                  :key="`${fund.code}-${idx}`"
-                  class="block"
-                >
-                  {{ line }}
-                </span>
+              <div class="fund-table__name" :title="fund.name">
+                {{ fund.name.slice(0, 8) }}{{ fund.name.length > 8 ? '…' : '' }}
               </div>
               <div class="fund-table__sub-row">
                 <div class="fund-table__sub tabular-nums">{{ fund.code }}</div>
@@ -1025,7 +1011,7 @@ onUnmounted(() => {
 
 .fund-table__cell {
   position: relative;
-  padding: 14px 16px;
+  padding: 4px 12px;
 }
 
 .fund-table__cell--num {
@@ -1073,7 +1059,9 @@ onUnmounted(() => {
   font-size: 15px;
   line-height: 20px;
   font-weight: 700;
-  word-break: break-all;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   letter-spacing: -0.01em;
 }
 
