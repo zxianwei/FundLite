@@ -467,13 +467,6 @@ onUnmounted(() => {
     </header>
 
     <main class="content-wrapper">
-      <div class="flex-between items-center mb-4 px-1 gap-4">
-        <span class="text-xs text-gray-400">
-          {{ lastUpdated ? `更新于 ${lastUpdated}` : '正在连接基金估值接口' }}
-        </span>
-        <span class="text-xs text-blue-500 font-medium">共 {{ funds.length }} 只基金</span>
-      </div>
-
       <div v-if="hasFunds" class="fund-table-shell">
         <div class="fund-table__scroller">
           <div class="fund-table__row fund-table__header">
@@ -857,6 +850,7 @@ onUnmounted(() => {
   left: 0;
   z-index: 2;
   background: #fff;
+  text-align: center;
 }
 
 .fund-table__cell--pressing {
