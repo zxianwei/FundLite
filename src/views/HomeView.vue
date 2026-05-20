@@ -6,6 +6,17 @@ import { loadWatchlist, saveWatchlist, exportWatchlist, importWatchlist, type St
 import { useTheme } from '../composables/useTheme'
 import FeatureNotice from '../components/FeatureNotice.vue'
 
+import IconSun from '../components/icons/IconSun.vue'
+import IconMoon from '../components/icons/IconMoon.vue'
+import IconRefresh from '../components/icons/IconRefresh.vue'
+import IconAdd from '../components/icons/IconAdd.vue'
+import IconSettings from '../components/icons/IconSettings.vue'
+import IconChevronUp from '../components/icons/IconChevronUp.vue'
+import IconChevronDown from '../components/icons/IconChevronDown.vue'
+import IconSearch from '../components/icons/IconSearch.vue'
+import IconExport from '../components/icons/IconExport.vue'
+import IconImport from '../components/icons/IconImport.vue'
+
 const { theme, toggleTheme } = useTheme()
 
 interface WatchedFund {
@@ -432,84 +443,24 @@ onUnmounted(() => {
         <h1 class="text-xl font-bold text-blue-600">FundLite</h1>
 
         <div class="header-actions">
-          <button
-            type="button"
-            class="theme-toggle-btn"
-            aria-label="切换主题"
-            @click="toggleTheme"
-          >
-            <svg v-if="theme === 'dark'" class="theme-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="5"></circle>
-              <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke-linecap="round" stroke-linejoin="round"></path>
-            </svg>
-            <svg v-else class="theme-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke-linecap="round" stroke-linejoin="round"></path>
-            </svg>
+          <button type="button" class="theme-toggle-btn" aria-label="切换主题" @click="toggleTheme">
+            <IconSun v-if="theme === 'dark'" class="theme-toggle__icon" />
+            <IconMoon v-else class="theme-toggle__icon" />
           </button>
 
-          <button
-            type="button"
-            class="refresh-btn"
-            aria-label="刷新"
-            :style="{ '--progress': refreshProgress }"
-            @click="refreshFunds"
-          >
-            <svg class="refresh-btn__progress" viewBox="0 0 32 32" aria-hidden="true">
-              <path
-                class="refresh-btn__track"
-                d="M16 0.5H21.5A10 10 0 0 1 31.5 10.5V21.5A10 10 0 0 1 21.5 31.5H10.5A10 10 0 0 1 0.5 21.5V10.5A10 10 0 0 1 10.5 0.5H16Z"
-                pathLength="100"
-              />
-              <path
-                class="refresh-btn__bar"
-                d="M16 0.5H21.5A10 10 0 0 1 31.5 10.5V21.5A10 10 0 0 1 21.5 31.5H10.5A10 10 0 0 1 0.5 21.5V10.5A10 10 0 0 1 10.5 0.5H16Z"
-                pathLength="100"
-                :style="{ strokeDasharray: `${refreshProgress} 100` }"
-              />
-            </svg>
-            <svg
-              class="refresh-btn__icon"
-              :class="{ 'refresh-btn__icon--spin': isRefreshing }"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-          </button>
+          <div class="refresh-btn-wrap">
+            <button type="button" class="refresh-btn" aria-label="刷新" :style="{ '--progress': refreshProgress }"
+              @click="refreshFunds">
+              <IconRefresh :spin="isRefreshing" class="refresh-btn__icon" />
+            </button>
+          </div>
 
           <button type="button" class="action-btn" aria-label="添加基金" @click="openSearchModal">
-            <svg
-              class="action-btn__icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path stroke-linecap="round" d="M12 5v14M5 12h14" />
-            </svg>
+            <IconAdd class="action-btn__icon" />
           </button>
 
           <button type="button" class="action-btn" aria-label="设置" @click="openSettingsModal">
-            <svg
-              class="action-btn__icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-              />
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+            <IconSettings class="action-btn__icon" />
           </button>
         </div>
       </div>
@@ -527,57 +478,26 @@ onUnmounted(() => {
         <div class="fund-table__scroller">
           <div class="fund-table__row fund-table__header">
             <div class="fund-table__cell fund-table__cell--sticky">基金名称</div>
-            <div
-              class="fund-table__cell fund-table__cell--num fund-table__cell--sortable"
-              @click="toggleGrowthSort"
-            >
+            <div class="fund-table__cell fund-table__cell--num fund-table__cell--sortable" @click="toggleGrowthSort">
               <div class="fund-table__sort-header">
                 <span>涨跌</span>
                 <span class="fund-table__sort-icons">
-                  <!-- 上箭头：升序时高亮 -->
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    class="fund-table__sort-arrow"
-                    :class="{ 'fund-table__sort-arrow--active': growthSortOrder === 'asc' }"
-                  >
-                    <path d="M7 14l5-5 5 5" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  <!-- 下箭头：降序时高亮 -->
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    class="fund-table__sort-arrow"
-                    :class="{ 'fund-table__sort-arrow--active': growthSortOrder === 'desc' }"
-                  >
-                    <path d="M7 10l5 5 5-5" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
+                  <IconChevronUp class="fund-table__sort-arrow"
+                    :class="{ 'fund-table__sort-arrow--active': growthSortOrder === 'asc' }" />
+                  <IconChevronDown class="fund-table__sort-arrow"
+                    :class="{ 'fund-table__sort-arrow--active': growthSortOrder === 'desc' }" />
                 </span>
               </div>
             </div>
             <div class="fund-table__cell fund-table__cell--num">估值</div>
           </div>
 
-          <div
-            v-for="fund in sortedFunds"
-            :key="fund.code"
-            class="fund-table__row fund-table__body-row"
-          >
-            <div
-              class="fund-table__cell fund-table__cell--sticky"
+          <div v-for="fund in sortedFunds" :key="fund.code" class="fund-table__row fund-table__body-row">
+            <div class="fund-table__cell fund-table__cell--sticky"
               :class="{ 'fund-table__cell--pressing': pressDeleteCode === fund.code }"
-              @touchstart.passive="startDeletePress(fund)"
-              @touchend="clearDeletePress"
-              @touchcancel="clearDeletePress"
-              @touchmove="clearDeletePress"
-              @mousedown="startDeletePress(fund)"
-              @mouseup="clearDeletePress"
-              @mouseleave="clearDeletePress"
-            >
+              @touchstart.passive="startDeletePress(fund)" @touchend="clearDeletePress" @touchcancel="clearDeletePress"
+              @touchmove="clearDeletePress" @mousedown="startDeletePress(fund)" @mouseup="clearDeletePress"
+              @mouseleave="clearDeletePress">
               <div class="fund-table__name" :title="fund.name">
                 {{ fund.name.slice(0, 8) }}{{ fund.name.length > 8 ? '…' : '' }}
               </div>
@@ -590,16 +510,14 @@ onUnmounted(() => {
             </div>
 
             <div class="fund-table__cell fund-table__cell--num tabular-nums">
-              <span
-                :class="[
-                  'fund-table__value',
-                  fund.growth === null
-                    ? 'text-gray-400'
-                    : fund.growth >= 0
-                      ? 'text-red-600'
-                      : 'text-green-600',
-                ]"
-              >
+              <span :class="[
+                'fund-table__value',
+                fund.growth === null
+                  ? 'text-gray-400'
+                  : fund.growth >= 0
+                    ? 'text-red-600'
+                    : 'text-green-600',
+              ]">
                 {{ fund.isLoading ? '更新中' : formatGrowth(fund.growth) }}
               </span>
             </div>
@@ -630,34 +548,15 @@ onUnmounted(() => {
             <div class="search-panel__subtitle">支持基金代码、简称、关键词搜索</div>
           </div>
 
-          <button
-            type="button"
-            class="search-panel__close"
-            aria-label="关闭"
-            @click="closeSearchModal"
-          >
+          <button type="button" class="search-panel__close" aria-label="关闭" @click="closeSearchModal">
             ×
           </button>
         </div>
 
         <div class="search-input-wrap">
-          <svg
-            class="search-input__icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <circle cx="11" cy="11" r="7"></circle>
-            <path stroke-linecap="round" d="m20 20-3.5-3.5"></path>
-          </svg>
-          <input
-            ref="searchInputRef"
-            v-model="searchQuery"
-            class="search-input"
-            type="text"
-            placeholder="输入基金代码或名称，例如 161725 / 白酒"
-          />
+          <IconSearch class="search-input__icon" />
+          <input ref="searchInputRef" v-model="searchQuery" class="search-input" type="text"
+            placeholder="输入基金代码或名称，例如 161725 / 白酒" />
         </div>
 
         <div class="search-results">
@@ -668,13 +567,8 @@ onUnmounted(() => {
           </div>
 
           <template v-else-if="searchResults.length > 0">
-            <button
-              v-for="item in searchResults"
-              :key="item.code"
-              type="button"
-              class="search-result"
-              @click="selectFund(item)"
-            >
+            <button v-for="item in searchResults" :key="item.code" type="button" class="search-result"
+              @click="selectFund(item)">
               <div class="search-result__main">
                 <div class="search-result__name">
                   {{ item.name }}
@@ -725,12 +619,7 @@ onUnmounted(() => {
             <div class="search-panel__subtitle">导入导出基金数据，方便在不同浏览器间迁移</div>
           </div>
 
-          <button
-            type="button"
-            class="search-panel__close"
-            aria-label="关闭"
-            @click="closeSettingsModal"
-          >
+          <button type="button" class="search-panel__close" aria-label="关闭" @click="closeSettingsModal">
             ×
           </button>
         </div>
@@ -740,9 +629,7 @@ onUnmounted(() => {
             <h3 class="settings-section__title">导出数据</h3>
             <p class="settings-section__desc">将当前基金列表导出为 JSON 文件，可用于备份或迁移到其他浏览器</p>
             <button type="button" class="settings-btn settings-btn--primary" @click="handleExport">
-              <svg class="settings-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
+              <IconExport class="settings-btn__icon" />
               导出基金数据
             </button>
           </div>
@@ -752,17 +639,10 @@ onUnmounted(() => {
           <div class="settings-section">
             <h3 class="settings-section__title">导入数据</h3>
             <p class="settings-section__desc">从 JSON 文件导入基金列表，会自动合并到现有数据中（跳过重复项）</p>
-            <input
-              ref="importFileInputRef"
-              type="file"
-              accept=".json"
-              class="settings-file-input"
-              @change="handleImportFile"
-            />
+            <input ref="importFileInputRef" type="file" accept=".json" class="settings-file-input"
+              @change="handleImportFile" />
             <button type="button" class="settings-btn settings-btn--secondary" @click="handleImportClick">
-              <svg class="settings-btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
+              <IconImport class="settings-btn__icon" />
               选择文件导入
             </button>
 
@@ -778,13 +658,8 @@ onUnmounted(() => {
     </div>
 
     <!-- 新功能提示 -->
-    <FeatureNotice
-      :version="currentVersion"
-      title="🎉 新功能上线"
-      :features="featureList"
-      confirm-text="知道了"
-      :debug="false"
-    />
+    <FeatureNotice :version="currentVersion" title="🎉 新功能上线" :features="featureList" confirm-text="知道了"
+      :debug="false" />
   </div>
 </template>
 
@@ -828,6 +703,11 @@ onUnmounted(() => {
   height: 16px;
 }
 
+.refresh-btn-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
 .refresh-btn {
   position: relative;
   width: 32px;
@@ -837,7 +717,7 @@ onUnmounted(() => {
   justify-content: center;
   border-radius: 10px;
   background: #fff;
-  border: 0;
+  border: 1px solid rgba(191, 219, 254, 1);
   color: #2563eb;
   cursor: pointer;
   transition:
@@ -848,11 +728,12 @@ onUnmounted(() => {
 }
 
 .refresh-btn:hover {
-  background: #f9fafb;
+  background: #eff6ff;
+  border-color: rgba(147, 197, 253, 1);
 }
 
 .refresh-btn:active {
-  background: #f3f4f6;
+  background: #dbeafe;
 }
 
 .refresh-btn:focus-visible,
@@ -896,34 +777,6 @@ onUnmounted(() => {
 .refresh-btn__icon {
   width: 16px;
   height: 16px;
-}
-
-.refresh-btn__progress {
-  position: absolute;
-  inset: 0;
-  width: 32px;
-  height: 32px;
-  pointer-events: none;
-}
-
-.refresh-btn__track,
-.refresh-btn__bar {
-  fill: none;
-  stroke-width: 1;
-}
-
-.refresh-btn__track {
-  stroke: rgba(229, 231, 235, 0.95);
-}
-
-.refresh-btn:hover .refresh-btn__track {
-  stroke: rgba(209, 213, 219, 0.95);
-}
-
-.refresh-btn__bar {
-  stroke: #60a5fa;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .refresh-btn__icon--spin {
@@ -1561,10 +1414,14 @@ onUnmounted(() => {
 
 .dark .refresh-btn {
   background: rgba(30, 41, 59, 0.8);
+  border-color: #475569;
+  color: #94a3b8;
 }
 
 .dark .refresh-btn:hover {
   background: rgba(51, 65, 85, 0.9);
+  border-color: #64748b;
+  color: #e2e8f0;
 }
 
 .dark .refresh-btn__track {

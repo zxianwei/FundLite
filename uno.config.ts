@@ -1,10 +1,13 @@
-import { defineConfig, presetUno, presetAttributify, presetIcons } from 'unocss'
+import { defineConfig, presetUno, presetAttributify, presetIcons, transformerDirectives } from 'unocss'
 
 export default defineConfig({
   presets: [
     presetUno(), // 默认预设，包含 Tailwind 类
     presetAttributify(), // 属性化模式支持
     presetIcons(), // 图标支持
+  ],
+  transformers: [
+    transformerDirectives(), // @apply 指令支持
   ],
   // 响应式断点配置（移动端优先）
   theme: {
