@@ -789,22 +789,18 @@ onUnmounted(() => {
   }
 }
 
+.content-wrapper {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .fund-table-shell {
-  overflow: hidden;
-  border: 1px solid rgba(219, 234, 254, 0.88);
-  border-radius: 22px;
-  background:
-    linear-gradient(180deg, rgba(248, 251, 255, 0.96) 0%, rgba(255, 255, 255, 1) 22%),
-    #fff;
-  box-shadow:
-    0 10px 30px rgba(15, 23, 42, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  background: #fff;
 }
 
 .fund-table__scroller {
-  --fund-name-col: clamp(160px, 11.5rem, 220px);
   overflow-x: auto;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.65), rgba(255, 255, 255, 0.98));
+  background: #fff;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
@@ -825,17 +821,17 @@ onUnmounted(() => {
 
 .fund-table__row {
   display: grid;
-  grid-template-columns: var(--fund-name-col) 80px 96px;
+  grid-template-columns: 140px 80px 96px;
   align-items: center;
-  min-width: calc(var(--fund-name-col) + 80px + 96px);
+  min-width: 316px;
 }
 
 .fund-table__header {
   position: sticky;
   top: 0;
   z-index: 4;
-  background: linear-gradient(180deg, rgba(240, 247, 255, 0.92), rgba(248, 250, 252, 0.96));
-  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
+  background: #f8fafc;
+  border-bottom: 2px solid #e2e8f0;
   color: #7b8aa0;
   font-size: 11px;
   letter-spacing: 0.08em;
@@ -844,22 +840,7 @@ onUnmounted(() => {
 }
 
 .fund-table__body-row {
-  border-bottom: 1px solid rgba(241, 245, 249, 0.95);
-  transition:
-    background-color 150ms ease,
-    transform 180ms ease;
-}
-
-.fund-table__body-row:last-child {
-  border-bottom: 0;
-}
-
-.fund-table__body-row:nth-child(2n) {
-  background: rgba(251, 253, 255, 0.72);
-}
-
-.fund-table__body-row:hover {
-  background: rgba(248, 250, 252, 0.9);
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .fund-table__cell {
@@ -868,30 +849,26 @@ onUnmounted(() => {
 }
 
 .fund-table__cell--num {
-  text-align: right;
+  text-align: center;
 }
 
 .fund-table__cell--sticky {
   position: sticky;
   left: 0;
   z-index: 2;
-  background:
-    linear-gradient(90deg, rgba(247, 250, 255, 1) 0%, rgba(255, 255, 255, 0.98) 82%),
-    #fff;
-  transition:
-    background-color 180ms ease,
-    box-shadow 180ms ease;
+  background: #fff;
 }
 
 .fund-table__cell--pressing {
-  background:
-    linear-gradient(90deg, rgba(254, 242, 242, 0.98) 0%, rgba(255, 255, 255, 0.98) 82%),
-    #fff;
-  box-shadow: inset 0 0 0 1px rgba(252, 165, 165, 0.28);
+  background: #fef2f2;
+}
+
+.fund-table__header .fund-table__cell {
+  padding: 16px 12px 12px;
 }
 
 .fund-table__header .fund-table__cell--sticky {
-  background: linear-gradient(90deg, rgba(239, 246, 255, 0.96) 0%, rgba(248, 250, 252, 0.98) 88%);
+  background: #f8fafc;
   z-index: 3;
 }
 
@@ -902,8 +879,7 @@ onUnmounted(() => {
   right: 0;
   width: 1px;
   height: 100%;
-  background: rgba(226, 232, 240, 0.95);
-  box-shadow: 12px 0 18px rgba(37, 99, 235, 0.04);
+  background: #e2e8f0;
 }
 
 .fund-table__name {
@@ -1223,10 +1199,6 @@ onUnmounted(() => {
     padding: 12px;
   }
 
-  .fund-table-shell {
-    border-radius: 18px;
-  }
-
   .search-panel {
     padding: 16px;
     border-radius: 20px;
@@ -1434,17 +1406,11 @@ onUnmounted(() => {
 
 /* 表格暗黑模式 */
 .dark .fund-table-shell {
-  background:
-    linear-gradient(180deg, rgba(30, 41, 59, 0.96) 0%, rgba(15, 23, 42, 1) 22%),
-    #0f172a;
-  border-color: rgba(51, 65, 85, 0.8);
-  box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: #0f172a;
 }
 
 .dark .fund-table__scroller {
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.65), rgba(15, 23, 42, 0.98));
+  background: #0f172a;
   scrollbar-color: rgba(75, 85, 99, 0.6) transparent;
 }
 
@@ -1453,43 +1419,37 @@ onUnmounted(() => {
 }
 
 .dark .fund-table__header {
-  background: linear-gradient(180deg, rgba(51, 65, 85, 0.92) 0%, rgba(30, 41, 59, 0.96) 100%);
-  border-bottom-color: rgba(71, 85, 105, 0.8);
+  background: #1e293b;
+  border-bottom-color: #475569;
   color: #94a3b8;
 }
 
 .dark .fund-table__body-row {
-  border-bottom-color: rgba(51, 65, 85, 0.6);
+  border-bottom-color: rgba(51, 65, 85, 0.5);
 }
 
 .dark .fund-table__body-row:nth-child(2n) {
-  background: rgba(30, 41, 59, 0.72);
+  background: transparent;
 }
 
 .dark .fund-table__body-row:hover {
-  background: rgba(51, 65, 85, 0.9);
+  background: transparent;
 }
 
 .dark .fund-table__cell--sticky {
-  background:
-    linear-gradient(90deg, rgba(30, 41, 59, 1) 0%, rgba(15, 23, 42, 0.98) 82%),
-    #0f172a;
+  background: #0f172a;
 }
 
 .dark .fund-table__cell--sticky::after {
-  background: rgba(51, 65, 85, 0.6);
-  box-shadow: 12px 0 18px rgba(0, 0, 0, 0.15);
+  background: rgba(51, 65, 85, 0.5);
 }
 
 .dark .fund-table__header .fund-table__cell--sticky {
-  background: linear-gradient(90deg, rgba(51, 65, 85, 0.96) 0%, rgba(30, 41, 59, 0.98) 88%);
+  background: #1e293b;
 }
 
 .dark .fund-table__cell--pressing {
-  background:
-    linear-gradient(90deg, rgba(127, 29, 29, 0.4) 0%, rgba(15, 23, 42, 0.98) 82%),
-    #0f172a;
-  box-shadow: inset 0 0 0 1px rgba(252, 165, 165, 0.2);
+  background: rgba(127, 29, 29, 0.3);
 }
 
 .dark .fund-table__name {
