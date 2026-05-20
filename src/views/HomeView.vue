@@ -468,8 +468,8 @@ onUnmounted(() => {
 
     <main class="content-wrapper">
       <div v-if="hasFunds" class="fund-table-shell">
-        <div class="fund-table__scroller">
-          <div class="fund-table__row fund-table__header">
+        <div class="fund-table__header">
+          <div class="fund-table__row">
             <div class="fund-table__cell fund-table__cell--sticky">基金名称</div>
             <div class="fund-table__cell fund-table__cell--num fund-table__cell--sortable" @click="toggleGrowthSort">
               <div class="fund-table__sort-header">
@@ -484,7 +484,8 @@ onUnmounted(() => {
             </div>
             <div class="fund-table__cell fund-table__cell--num">估值</div>
           </div>
-
+        </div>
+        <div class="fund-table__scroller">
           <div v-for="fund in sortedFunds" :key="fund.code" class="fund-table__row fund-table__body-row">
             <div class="fund-table__cell fund-table__cell--sticky"
               :class="{ 'fund-table__cell--pressing': pressDeleteCode === fund.code }"
@@ -820,9 +821,6 @@ onUnmounted(() => {
 }
 
 .fund-table__header {
-  position: sticky;
-  top: 0;
-  z-index: 4;
   background: #f8fafc;
   border-bottom: 2px solid #e2e8f0;
   color: #7b8aa0;
