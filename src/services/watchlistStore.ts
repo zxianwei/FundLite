@@ -1,6 +1,15 @@
+export interface PositionInfo {
+  costNav: number      // 买入时净值
+  shares: number       // 持有份额
+  amount: number       // 投入金额（冗余，用于展示）
+  buyDate: string      // 买入日期
+}
+
 export interface StoredFund {
   code: string
   name: string
+  addedNav?: number
+  addedDate?: string
 }
 
 const DB_NAME = 'fundlite-db'
@@ -147,7 +156,14 @@ function validateImportedData(data: unknown): StoredFund[] | null {
     const name = typeof fund.name === 'string' ? fund.name.trim() : ''
 
     if (code && name) {
-      validFunds.push({ code, name })
+      const stored: StoredFund = { code, name }
+      if (typeof fund.addedNav === 'number' && Number.isFinite(fund.addedNav)) {
+        stored.addedNav = fund.addedNav
+      }
+      if (typeof fund.addedDate === 'string') {
+        stored.addedDate = fund.addedDate
+      }
+      validFunds.push(stored)
     }
   }
 

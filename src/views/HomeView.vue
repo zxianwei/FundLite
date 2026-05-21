@@ -29,6 +29,11 @@ interface WatchedFund {
   estimateTime: string
   isLoading: boolean
   error: string
+  position: number | null
+  addedNav: number | null
+  addedDate: string
+  cumulativeGrowth: number | null
+  holdDays: number | null
 }
 
 const REFRESH_INTERVAL = 30000
@@ -50,15 +55,17 @@ const isSettingsOpen = ref(false)
 const importFileInputRef = ref<HTMLInputElement | null>(null)
 const importError = ref('')
 const importSuccess = ref('')
+const scrollerRef = ref<HTMLElement | null>(null)
+const headerRef = ref<HTMLElement | null>(null)
 
 // 排序状态: 'none' | 'asc' | 'desc'
 const growthSortOrder = ref<'none' | 'asc' | 'desc'>('none')
 
 // 新功能列表 - 每次更新时修改 version 和列表内容
 // 版本号规则：主版本.功能版本.修复版本（如 1.0.0 → 1.1.0 新增功能 → 1.1.1 修复）
-const currentVersion = '1.1.0'
+const currentVersion = '1.2.0'
 const featureList = [
-  { title: '暗黑模式', desc: '支持亮色/暗黑主题切换，自动适配系统偏好，保护眼睛' },
+  { title: '累计收益', desc: '添加基金时自动记录净值，随时查看自买入以来的累计涨跌幅以及持有天数' },
 ]
 
 
@@ -117,7 +124,7 @@ function hasEmptyGrowth(): boolean {
   return funds.value.some((fund) => !fund.error && fund.growth === null)
 }
 
-function createWatchedFund(input: Pick<WatchedFund, 'code' | 'name'>): WatchedFund {
+function createWatchedFund(input: Pick<WatchedFund, 'code' | 'name'> & { addedNav?: number | null; addedDate?: string; position?: number | null }): WatchedFund {
   return {
     code: input.code,
     name: input.name,
@@ -128,6 +135,11 @@ function createWatchedFund(input: Pick<WatchedFund, 'code' | 'name'>): WatchedFu
     estimateTime: '',
     isLoading: false,
     error: '',
+    position: input.position ?? null,
+    addedNav: input.addedNav ?? null,
+    addedDate: input.addedDate ?? '',
+    cumulativeGrowth: null,
+    holdDays: null,
   }
 }
 
@@ -135,13 +147,22 @@ async function persistFunds() {
   const payload = funds.value.map((fund) => ({
     code: fund.code,
     name: fund.name,
+    addedNav: fund.addedNav ?? undefined,
+    addedDate: fund.addedDate || undefined,
   }))
-  // 列表展示态和持久化态分开，只保存最小必要字段。
   await saveWatchlist(payload)
 }
 
 function setLastUpdated() {
   lastUpdated.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
+}
+
+function syncHeaderScroll() {
+  const scroller = scrollerRef.value
+  const header = headerRef.value
+  if (scroller && header) {
+    header.scrollLeft = scroller.scrollLeft
+  }
 }
 
 function startProgress() {
@@ -176,6 +197,8 @@ async function refreshFund(fund: WatchedFund) {
     fund.nav = result.nav
     fund.navDate = result.navDate
     fund.estimateTime = result.estimateTime
+    fund.cumulativeGrowth = calculateCumulativeGrowth(fund)
+    fund.holdDays = calculateHoldDays(fund.addedDate)
   } catch (error: unknown) {
     fund.error = error instanceof Error ? error.message : '估值更新失败'
   } finally {
@@ -234,9 +257,16 @@ async function selectFund(result: FundSearchResult) {
     return
   }
 
+  const extra: { addedNav?: number; addedDate?: string } = {}
+  if (result.nav !== null) {
+    extra.addedNav = result.nav
+    extra.addedDate = new Date().toISOString().slice(0, 10)
+  }
+
   const fund = createWatchedFund({
     code: result.code,
     name: result.name,
+    ...extra,
   })
 
   // 先把搜索结果里的基础净值带进来，再补一轮实时估值。
@@ -290,6 +320,8 @@ function handleExport() {
   const payload = funds.value.map((fund) => ({
     code: fund.code,
     name: fund.name,
+    addedNav: fund.addedNav ?? undefined,
+    addedDate: fund.addedDate || undefined,
   }))
   const json = exportWatchlist(payload)
   const blob = new Blob([json], { type: 'application/json' })
@@ -381,6 +413,23 @@ function formatEstimate(value: number | null) {
   return value.toFixed(4)
 }
 
+function calculateCumulativeGrowth(fund: WatchedFund): number | null {
+  if (fund.addedNav === null || fund.addedNav === 0) return null
+  const current = isInTradingHours()
+    ? (fund.estimate ?? fund.nav)
+    : fund.nav
+  if (current === null) return null
+  return ((current - fund.addedNav) / fund.addedNav) * 100
+}
+
+function calculateHoldDays(addedDate: string): number | null {
+  if (!addedDate) return null
+  const start = new Date(addedDate)
+  const now = new Date()
+  const diff = Math.floor((now.getTime() - start.getTime()) / 86400000)
+  return diff >= 0 ? diff : null
+}
+
 watch(searchQuery, (value) => {
   searchError.value = ''
   if (searchTimer) window.clearTimeout(searchTimer)
@@ -418,7 +467,18 @@ watch(searchQuery, (value) => {
 onMounted(async () => {
   // 首屏先恢复本地自选，再按当前列表刷新实时估值。
   const storedFunds = await loadWatchlist()
-  funds.value = storedFunds.map(createWatchedFund)
+  funds.value = storedFunds.map((s) =>
+    createWatchedFund({
+      code: s.code,
+      name: s.name,
+      addedNav: s.addedNav,
+      addedDate: s.addedDate,
+    }),
+  )
+  const scroller = scrollerRef.value
+  if (scroller) {
+    scroller.addEventListener('scroll', syncHeaderScroll)
+  }
   await refreshFunds()
 })
 
@@ -428,6 +488,10 @@ onUnmounted(() => {
   if (deletePressTimer) window.clearTimeout(deletePressTimer)
   if (importMessageTimer) window.clearTimeout(importMessageTimer)
   if (extraRefreshTimer) window.clearTimeout(extraRefreshTimer)
+  const scroller = scrollerRef.value
+  if (scroller) {
+    scroller.removeEventListener('scroll', syncHeaderScroll)
+  }
   progressInterval = null
   searchTimer = null
   deletePressTimer = null
@@ -468,7 +532,7 @@ onUnmounted(() => {
 
     <main class="content-wrapper">
       <div v-if="hasFunds" class="fund-table-shell">
-        <div class="fund-table__header">
+        <div ref="headerRef" class="fund-table__header">
           <div class="fund-table__row">
             <div class="fund-table__cell fund-table__cell--sticky">基金名称</div>
             <div class="fund-table__cell fund-table__cell--num fund-table__cell--sortable" @click="toggleGrowthSort">
@@ -482,15 +546,16 @@ onUnmounted(() => {
                 </span>
               </div>
             </div>
+            <div class="fund-table__cell fund-table__cell--num">累计收益</div>
             <div class="fund-table__cell fund-table__cell--num">估值</div>
           </div>
         </div>
-        <div class="fund-table__scroller">
+        <div ref="scrollerRef" class="fund-table__scroller">
           <div v-for="fund in sortedFunds" :key="fund.code" class="fund-table__row fund-table__body-row">
             <div class="fund-table__cell fund-table__cell--sticky"
               :class="{ 'fund-table__cell--pressing': pressDeleteCode === fund.code }"
               @touchstart.passive="startDeletePress(fund)" @touchend="clearDeletePress" @touchcancel="clearDeletePress"
-              @touchmove="clearDeletePress" @mousedown="startDeletePress(fund)" @mouseup="clearDeletePress"
+              @touchmove.passive="clearDeletePress" @mousedown="startDeletePress(fund)" @mouseup="clearDeletePress"
               @mouseleave="clearDeletePress">
               <div class="fund-table__name" :title="fund.name">
                 {{ fund.name.slice(0, 8) }}{{ fund.name.length > 8 ? '…' : '' }}
@@ -513,6 +578,27 @@ onUnmounted(() => {
                     : 'text-green-600',
               ]">
                 {{ fund.isLoading ? '更新中' : formatGrowth(fund.growth) }}
+              </span>
+            </div>
+
+            <div class="fund-table__cell fund-table__cell--num tabular-nums">
+              <template v-if="fund.addedNav !== null && !fund.isLoading">
+                <div :class="[
+                  'fund-table__value',
+                  fund.cumulativeGrowth === null
+                    ? 'text-gray-400'
+                    : fund.cumulativeGrowth >= 0
+                      ? 'text-red-600'
+                      : 'text-green-600',
+                ]">
+                  {{ fund.cumulativeGrowth === null ? '--' : formatGrowth(fund.cumulativeGrowth) }}
+                </div>
+                <div class="fund-table__hold-days" v-if="fund.holdDays !== null">
+                  {{ fund.holdDays }} 天
+                </div>
+              </template>
+              <span v-else class="fund-table__value text-gray-400">
+                {{ fund.isLoading ? '--' : '--' }}
               </span>
             </div>
 
@@ -784,8 +870,8 @@ onUnmounted(() => {
 }
 
 .content-wrapper {
-  padding-left: 0;
-  padding-right: 0;
+  padding: 0;
+  margin: 0;
 }
 
 .fund-table-shell {
@@ -795,7 +881,6 @@ onUnmounted(() => {
 .fund-table__scroller {
   overflow-x: auto;
   background: #fff;
-  -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
 }
@@ -815,13 +900,17 @@ onUnmounted(() => {
 
 .fund-table__row {
   display: grid;
-  grid-template-columns: 140px 80px 96px;
+  grid-template-columns: 140px 80px 96px 96px;
   align-items: center;
-  min-width: 316px;
+  min-width: 412px;
 }
 
 .fund-table__header {
-  background: #f8fafc;
+  position: sticky;
+  top: 56px;
+  z-index: 15;
+  overflow: hidden;
+  background: #fff;
   border-bottom: 2px solid #e2e8f0;
   color: #7b8aa0;
   font-size: 11px;
@@ -837,6 +926,7 @@ onUnmounted(() => {
 .fund-table__cell {
   position: relative;
   padding: 4px 12px;
+  background: #fff;
 }
 
 .fund-table__cell--num {
@@ -860,7 +950,6 @@ onUnmounted(() => {
 }
 
 .fund-table__header .fund-table__cell--sticky {
-  background: #f8fafc;
   z-index: 3;
 }
 
@@ -918,6 +1007,13 @@ onUnmounted(() => {
 .fund-table__value--estimate {
   color: #172033;
   font-size: 17px;
+}
+
+.fund-table__hold-days {
+  margin-top: 2px;
+  color: #9ca3af;
+  font-size: 11px;
+  line-height: 14px;
 }
 
 .fund-table__sort-header {
@@ -1411,7 +1507,7 @@ onUnmounted(() => {
 }
 
 .dark .fund-table__header {
-  background: #1e293b;
+  background: #0f172a;
   border-bottom-color: #475569;
   color: #94a3b8;
 }
@@ -1436,8 +1532,8 @@ onUnmounted(() => {
   background: rgba(51, 65, 85, 0.5);
 }
 
-.dark .fund-table__header .fund-table__cell--sticky {
-  background: #1e293b;
+.dark .fund-table__cell {
+  background: #0f172a;
 }
 
 .dark .fund-table__cell--pressing {
@@ -1458,6 +1554,10 @@ onUnmounted(() => {
 
 .dark .fund-table__value--estimate {
   color: #e2e8f0;
+}
+
+.dark .fund-table__hold-days {
+  color: #64748b;
 }
 
 .dark .fund-table__sort-arrow {
